@@ -1,0 +1,8 @@
+# Build artifacts
+*.o
+shiro
+
+# Temporary assembly/compiled files for testing
+*.s
+tmp
+tmp.s
