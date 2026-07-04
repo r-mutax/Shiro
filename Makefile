@@ -1,8 +1,9 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -MMD -MP
 SRC = $(wildcard src/*.cpp)
 OBJDIR = obj
 OBJ = $(patsubst src/%.cpp, $(OBJDIR)/%.o, $(SRC))
+DEPS = $(OBJ:.o=.d)
 TARGET = shiro
 
 all: $(TARGET)
@@ -18,5 +19,7 @@ $(OBJDIR):
 
 clean:
 	rm -rf $(OBJDIR) src/*.o $(TARGET)
+
+-include $(DEPS)
 
 .PHONY: all clean
