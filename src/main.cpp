@@ -1,8 +1,7 @@
 #include <iostream>
-#include "shiro.hpp"
+#include "compiler.hpp"
 
-int main(int argc, const char *argv[])
-{
+int main(int argc, const char *argv[]){
     if(argc < 2) {
         std::cerr << "Usage: shiro <filename>" << std::endl;
         return 1;
@@ -11,7 +10,7 @@ int main(int argc, const char *argv[])
         std::cerr << "Too many arguments" << std::endl;
         return 1;
     }
-    
+
     Compiler compiler;
     if(!compiler.compile_file(argv[1])) {
         return 1;
