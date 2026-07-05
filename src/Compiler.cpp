@@ -3,6 +3,7 @@
 #include "compiler.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "semantics.hpp"
 
 Compiler::Compiler() {
 }
@@ -39,6 +40,12 @@ bool Compiler::compile_src(std::string_view src) {
 
         if(!ast) {
             std::cerr << "Error: Failed to parse source code" << std::endl;
+            return false;
+        }
+
+        Semantics semantics;
+        if(!semantics.analyze(ast)) {
+            std::cerr << "Error: Failed to analyze source code" << std::endl;
             return false;
         }
     } catch(std::exception& e) {
