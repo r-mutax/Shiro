@@ -1,5 +1,9 @@
+#ifndef SHIRO_TOKEN_HPP
+#define SHIRO_TOKEN_HPP
+
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 struct Token {
     enum Type {
@@ -11,6 +15,8 @@ struct Token {
 
     Type type;
     std::string value;
+    size_t offset = 0;
+    size_t length = 0;
 
     std::string to_str() const {
         switch(type) {
@@ -35,8 +41,27 @@ public:
     std::vector<Token> tokens;
     size_t cursor = 0;
 
-    Token next();
-    Token peek();
-    bool is_eof();
+    const Token& peek() {
+        if(cursor >= tokens.size()) {
+            throw std::runtime_error("Unexpected EOF");
+        }
+        return tokens[cursor];
+    }
+
+    Token next(){
+        if(cursor >= tokens.size()) {
+            throw std::runtime_error("Unexpected EOF");
+        }
+        return tokens[cursor++];
+    }
+
+    bool is_eof(){
+        if(cursor >= tokens.size()) {
+            return true;
+        }
+
+        return tokens[cursor].type == Token::EOF_TOK;
+    }
 };
 
+#endif // SHIRO_TOKEN_HPP

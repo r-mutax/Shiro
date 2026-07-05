@@ -2,6 +2,7 @@
 #include <fstream>
 #include "compiler.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
 Compiler::Compiler() {
 }
@@ -29,8 +30,21 @@ bool Compiler::compile_file(std::string_view filename) {
 
 bool Compiler::compile_src(std::string_view src) {
 
-    Lexer lexer;
-    lexer.lex_src(src);
+    try {
+        Lexer lexer;
+        TokenStream stream = lexer.lex_src(src);
+
+        Parser parser(stream);
+        ASTNode* ast = parser.parse();
+
+        if(!ast) {
+            std::cerr << "Error: Failed to parse source code" << std::endl;
+            return false;
+        }
+    } catch(std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
 
     return true;
 }

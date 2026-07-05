@@ -10,42 +10,53 @@ Lexer::~Lexer() {
 TokenStream Lexer::lex_src(std::string_view src) {
     TokenStream stream;
 
-    int len = src.size();
+    size_t len = src.size();
     
-    for(int i = 0; i < len; ++i){
+    for(size_t i = 0; i < len; ++i){
         char c = src[i];
         
         switch(c) {
             case '0'...'9': {
-                int j = i;
+                size_t j = i;
                 while(j < len && std::isdigit(src[j])) {
                     j++;
                 }
                 stream.tokens.push_back({
                     Token::NUMBER,
-                    std::string(src.substr(i, j - i))
+                    std::string(src.substr(i, j - i)),
+                    i,
+                    j - i
                 });
                 i = j - 1;
                 break;
             }
             case '+': {
-                stream.tokens.push_back({Token::PLUS, "+"});
+                stream.tokens.push_back({Token::PLUS, "+", i, 1});
                 break;
             }
             case '-' : {
-                stream.tokens.push_back({Token::MINUS, "-"});
+                stream.tokens.push_back({Token::MINUS, "-", i, 1});
                 break;
+            }
+            case ' ':
+            case '\t':
+            case '\r':
+            case '\n':
+                break;
+            default: {
+                std::cerr << "Error: Unknown token: " << c << std::endl;
+                return TokenStream{};
             }
         }
     }
 
-    stream.tokens.push_back({Token::EOF_TOK, ""});
+    stream.tokens.push_back({Token::EOF_TOK, "", len, 0});
 
     // トークンストリームをすべて標準出力に吐き出す
     // タイプは文字列として吐き出す
-    for(const auto& token : stream.tokens) {
-        std::cout << token.to_str() << std::endl;
-    }
+    //for(const auto& token : stream.tokens) {
+    //    std::cout << token.to_str() << std::endl;
+    //}
 
     return stream;
 }
