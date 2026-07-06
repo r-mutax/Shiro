@@ -4,6 +4,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
+#include "irgen.hpp"
 
 Compiler::Compiler() {
 }
@@ -48,6 +49,14 @@ bool Compiler::compile_src(std::string_view src) {
             std::cerr << "Error: Failed to analyze source code" << std::endl;
             return false;
         }
+
+        IRGenerator ir_generator;
+        if(!ir_generator.generate(ast)) {
+            std::cerr << "Error: Failed to generate code" << std::endl;
+            return false;
+        }
+
+        ir_generator.dump();
     } catch(std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return false;

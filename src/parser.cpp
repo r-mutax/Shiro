@@ -7,13 +7,18 @@ ASTNode* Parser::parse(){
 ASTNode* Parser::parseProgram(){
     auto* node = new TranslationUnitNode();
 
-    node->statements.push_back(parseExpression());
+    node->statements.push_back(parseExpressionStatement());
 
     if (!stream.is_eof()) {
         throw std::runtime_error("Unexpected token after expression: " + stream.peek().to_str());
     }
 
     return node;
+}
+
+ASTNode* Parser::parseExpressionStatement(){
+    ASTNode* expr = parseExpression();
+    return new ExpressionStatementNode(expr);
 }
 
 ASTNode* Parser::parseExpression(){

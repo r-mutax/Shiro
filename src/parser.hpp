@@ -10,6 +10,7 @@ class Parser {
     ASTNode* parseProgram();
     ASTNode* parseExpression();
     ASTNode* parseAddSub();
+    ASTNode* parseExpressionStatement();
     ASTNode* parsePrimary();
 
 public:

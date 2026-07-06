@@ -8,6 +8,7 @@ struct ASTNode {
         NODE_TRANSLATION_UNIT,
         NODE_INTEGER,
         NODE_BINARY_OP,
+        NODE_EXPRESSION_STATEMENT,
     };
 
     Type type;
@@ -19,6 +20,12 @@ struct TranslationUnitNode : public ASTNode {
     std::vector<ASTNode*> statements;
 
     explicit TranslationUnitNode() : ASTNode(Type::NODE_TRANSLATION_UNIT) {}
+};
+
+struct ExpressionStatementNode : public ASTNode {
+    ASTNode* expr;
+
+    explicit ExpressionStatementNode(ASTNode* expr) : ASTNode(Type::NODE_EXPRESSION_STATEMENT), expr(expr) {}
 };
 
 struct BinaryOpNode : public ASTNode{
