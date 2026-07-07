@@ -5,6 +5,7 @@
 #include "parser.hpp"
 #include "semantics.hpp"
 #include "irgen.hpp"
+#include "x86gen.hpp"
 
 Compiler::Compiler() {
 }
@@ -56,7 +57,9 @@ bool Compiler::compile_src(std::string_view src) {
             return false;
         }
 
-        ir_generator.dump();
+        X86Generator x86_generator(ir_generator.get_program());
+        x86_generator.generate();
+
     } catch(std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return false;

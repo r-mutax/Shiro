@@ -29,6 +29,16 @@ struct Operand {
         }
         return "UNKNOWN";
     }
+
+    std::string to_x86() const {
+        switch(kind) {
+            case TEMP:
+                return "QWORD PTR [rbp - " + std::to_string((temp_id + 1) * 8) + "]";
+            case INT_VAL:
+                return std::to_string(imm);
+        }
+        return "UNKNOWN";
+    }
 };
 
 struct IRInstruction {
@@ -70,10 +80,24 @@ struct IRInstruction {
     }
 };
 
-class IRGenerator {
+class IRFunction {
+public:
+    std::string name;
     std::vector<IRInstruction> instructions;
-    int next_temp = 0;
+    int temp_count = 0;
+};
 
+class IRProgram {
+public:
+    std::vector<IRFunction> functions;
+};
+
+class IRGenerator {
+    IRProgram program;
+    int next_temp = 0;
+    std::vector<IRInstruction> instructions;
+
+    IRFunction gen_function(ASTNode* node);
     Operand gen_stmt(ASTNode* node);
     Operand gen_expr(ASTNode* node);
 
@@ -82,9 +106,9 @@ public:
     ~IRGenerator() = default;
 
     bool generate(ASTNode* ast);
-    const std::vector<IRInstruction>& get_instructions() const {
-        return instructions;
-    }
+
+    const IRProgram& get_program() const { return program; }
+
     void dump();
 };
 

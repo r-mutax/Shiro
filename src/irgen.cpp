@@ -2,20 +2,43 @@
 #include <iostream>
 
 bool IRGenerator::generate(ASTNode* ast) {
-    
+
     if(ast->type != ASTNode::NODE_TRANSLATION_UNIT) {
         throw std::runtime_error("Expected translation unit");
     }
 
     TranslationUnitNode* tu = static_cast<TranslationUnitNode*>(ast);
-    Operand res = Operand::IntVal(0);
-
-    for(auto& stmt : tu->statements){
-        res = gen_stmt(stmt);
+    for(auto& def : tu->definitions){
+        IRFunction func = gen_function(def);
+        program.functions.push_back(func);
     }
-    instructions.push_back({IRInstruction::Op::RET, res});
 
     return true;
+}
+
+IRFunction IRGenerator::gen_function(ASTNode* node){
+
+    if(node->type != ASTNode::NODE_FUNCTION_DEFINITION) {
+        throw std::runtime_error("Expected function definition");
+    }
+
+    FunctionDefinitionNode* func_def = static_cast<FunctionDefinitionNode*>(node);
+    IRFunction func;
+    func.name = func_def->name;
+
+    instructions.clear();
+    next_temp = 0;
+
+    Operand ret = Operand::IntVal(0);
+    for(auto& stmt : func_def->statements){
+        ret = gen_stmt(stmt);
+    }
+    instructions.push_back({IRInstruction::Op::RET, ret});
+    
+    func.instructions = instructions;
+    func.temp_count = next_temp;
+    
+    return func;
 }
 
 Operand IRGenerator::gen_stmt(ASTNode* node){
@@ -56,8 +79,12 @@ Operand IRGenerator::gen_expr(ASTNode* node){
 }
 
 void IRGenerator::dump(){
-    for(auto& instr : instructions){
-        std::cout << instr.to_str() << std::endl;
+    for(auto& func : program.functions){
+        std::cout << "define " << func.name << " {" << std::endl;
+        for(auto& instr : func.instructions){
+            std::cout << "  " << instr.to_str() << std::endl;
+        }
+        std::cout << "}" << std::endl;
     }
 }
 

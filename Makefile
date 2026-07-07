@@ -20,6 +20,9 @@ $(OBJDIR):
 clean:
 	rm -rf $(OBJDIR) src/*.o $(TARGET)
 
+test: $(TARGET)
+	bash test.sh
+
 -include $(DEPS)
 
-.PHONY: all clean
+.PHONY: all clean test

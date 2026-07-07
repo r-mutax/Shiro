@@ -7,13 +7,27 @@ ASTNode* Parser::parse(){
 ASTNode* Parser::parseProgram(){
     auto* node = new TranslationUnitNode();
 
-    node->statements.push_back(parseExpressionStatement());
+    node->definitions.push_back(parseDefinition());
 
     if (!stream.is_eof()) {
-        throw std::runtime_error("Unexpected token after expression: " + stream.peek().to_str());
+        throw std::runtime_error("Unexpected token after definition: " + stream.peek().to_str());
     }
 
     return node;
+}
+
+ASTNode* Parser::parseDefinition(){
+    return parseFunctionDefinition();
+}
+
+ASTNode* Parser::parseFunctionDefinition(){
+    // now only 1 statements
+    // for this version, i only support function definition of 'main'
+    
+    std::vector<ASTNode*> statements;
+    statements.push_back(parseExpressionStatement());
+    
+    return new FunctionDefinitionNode("main", statements);
 }
 
 ASTNode* Parser::parseExpressionStatement(){

@@ -6,6 +6,7 @@
 struct ASTNode {
     enum Type {
         NODE_TRANSLATION_UNIT,
+        NODE_FUNCTION_DEFINITION,
         NODE_INTEGER,
         NODE_BINARY_OP,
         NODE_EXPRESSION_STATEMENT,
@@ -17,9 +18,16 @@ struct ASTNode {
 };
 
 struct TranslationUnitNode : public ASTNode {
-    std::vector<ASTNode*> statements;
+    std::vector<ASTNode*> definitions;
 
     explicit TranslationUnitNode() : ASTNode(Type::NODE_TRANSLATION_UNIT) {}
+};
+
+struct FunctionDefinitionNode : public ASTNode {
+    std::string name;
+    std::vector<ASTNode*> statements;
+
+    explicit FunctionDefinitionNode(std::string name, std::vector<ASTNode*> statements) : ASTNode(Type::NODE_FUNCTION_DEFINITION), name(name), statements(statements) {}
 };
 
 struct ExpressionStatementNode : public ASTNode {

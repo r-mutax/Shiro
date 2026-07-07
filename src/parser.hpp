@@ -8,6 +8,8 @@ class Parser {
     TokenStream& stream;
 
     ASTNode* parseProgram();
+    ASTNode* parseDefinition();
+    ASTNode* parseFunctionDefinition();
     ASTNode* parseExpression();
     ASTNode* parseAddSub();
     ASTNode* parseExpressionStatement();
