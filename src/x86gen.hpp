@@ -3,15 +3,19 @@
 
 #include <vector>
 #include "irgen.hpp"
+#include <iostream>
+#include <ostream>
 
 class X86Generator{
     const IRProgram& program;
+    std::ostream& out;
 
     void gen_function(const IRFunction& func);
     void gen_instruction(const IRInstruction& instr);
 
 public:
-    X86Generator(const IRProgram& program) : program(program) {}
+    X86Generator(const IRProgram& program, std::ostream& out = std::cout) 
+        : program(program), out(out) {}
     ~X86Generator() = default;
 
     void generate();

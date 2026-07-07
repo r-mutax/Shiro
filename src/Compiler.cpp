@@ -57,7 +57,7 @@ bool Compiler::compile_src(std::string_view src) {
             return false;
         }
 
-        X86Generator x86_generator(ir_generator.get_program());
+        X86Generator x86_generator(ir_generator.get_program(), std::cout);
         x86_generator.generate();
 
     } catch(std::exception& e) {
