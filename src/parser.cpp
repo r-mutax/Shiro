@@ -40,9 +40,22 @@ ASTNode* Parser::parseExpression(){
 }
 
 ASTNode* Parser::parseAddSub(){
-    auto* node = parsePrimary();
+    auto* node = parseMulDivMod();
 
     while(stream.peek().type == Token::PLUS || stream.peek().type == Token::MINUS){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseMulDivMod());
+    }
+
+    return node;
+}
+
+ASTNode* Parser::parseMulDivMod(){
+    auto* node = parsePrimary();
+
+    while(stream.peek().type == Token::ASTERISK
+             || stream.peek().type == Token::SLASH
+             || stream.peek().type == Token::MOD){
         Token op = stream.next();
         node = new BinaryOpNode(node, op, parsePrimary());
     }

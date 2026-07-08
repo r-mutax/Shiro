@@ -68,6 +68,15 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             case Token::MINUS:
                 instructions.push_back({IRInstruction::Op::SUB, ret, left, right});
                 break;
+            case Token::ASTERISK:
+                instructions.push_back({IRInstruction::Op::MUL, ret, left, right});
+                break;
+            case Token::SLASH:
+                instructions.push_back({IRInstruction::Op::DIV, ret, left, right});
+                break;
+            case Token::MOD:
+                instructions.push_back({IRInstruction::Op::MOD, ret, left, right});
+                break;
             default:
                 throw std::runtime_error("Unexpected operator: " + bin_op->op.to_str());
         }

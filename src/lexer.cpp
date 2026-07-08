@@ -38,6 +38,18 @@ TokenStream Lexer::lex_src(std::string_view src) {
                 stream.tokens.push_back({Token::MINUS, "-", i, 1});
                 break;
             }
+            case '*' : {
+                stream.tokens.push_back({Token::ASTERISK, "*", i, 1});
+                break;
+            }
+            case '/' : {
+                stream.tokens.push_back({Token::SLASH, "/", i, 1});
+                break;
+            }
+            case '%' : {
+                stream.tokens.push_back({Token::MOD, "%", i, 1});
+                break;
+            }
             case ' ':
             case '\t':
             case '\r':
@@ -51,12 +63,6 @@ TokenStream Lexer::lex_src(std::string_view src) {
     }
 
     stream.tokens.push_back({Token::EOF_TOK, "", len, 0});
-
-    // トークンストリームをすべて標準出力に吐き出す
-    // タイプは文字列として吐き出す
-    //for(const auto& token : stream.tokens) {
-    //    std::cout << token.to_str() << std::endl;
-    //}
 
     return stream;
 }

@@ -54,6 +54,25 @@ void X86Generator::gen_instruction(const IRInstruction& instr){
             out << "  sub rax, " << instr.src2.to_x86() << std::endl;
             out << "  mov " << instr.dst.to_x86() << ", rax" << std::endl;
             break;
+        case IRInstruction::Op::MUL:
+            out << "  mov rax, " << instr.src1.to_x86() << std::endl;
+            out << "  imul rax, " << instr.src2.to_x86() << std::endl;
+            out << "  mov " << instr.dst.to_x86() << ", rax" << std::endl;
+            break;
+        case IRInstruction::Op::DIV:
+            out << "  mov rax, " << instr.src1.to_x86() << std::endl;
+            out << "  cqo" << std::endl;
+            out << "  mov rdi, " << instr.src2.to_x86() << std::endl;
+            out << "  idiv rdi" << std::endl;
+            out << "  mov " << instr.dst.to_x86() << ", rax" << std::endl;
+            break;
+        case IRInstruction::Op::MOD:
+            out << "  mov rax, " << instr.src1.to_x86() << std::endl;
+            out << "  cqo" << std::endl;
+            out << "  mov rdi, " << instr.src2.to_x86() << std::endl;
+            out << "  idiv rdi" << std::endl;
+            out << "  mov " << instr.dst.to_x86() << ", rdx" << std::endl;
+            break;
         case IRInstruction::Op::RET:
             out << "  mov rax, " << instr.src1.to_x86() << std::endl;
             break;

@@ -11,6 +11,7 @@ class Parser {
     ASTNode* parseDefinition();
     ASTNode* parseFunctionDefinition();
     ASTNode* parseExpression();
+    ASTNode* parseMulDivMod();
     ASTNode* parseAddSub();
     ASTNode* parseExpressionStatement();
     ASTNode* parsePrimary();

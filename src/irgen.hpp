@@ -46,6 +46,9 @@ struct IRInstruction {
         MOV,    // copy data from src to dst
         ADD,    // add src1 and src2 to dst
         SUB,    // sub src2 from src1 to dst
+        MUL,    // mul src1 and src2 to dst
+        DIV,    // div src2 from src1 to dst
+        MOD,     // mod src2 from src1 to dst
         RET,    // return value
     } op;
 
@@ -73,6 +76,12 @@ struct IRInstruction {
                 return "ADD " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case SUB:
                 return "SUB " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case MUL:
+                return "MUL " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case DIV:
+                return "DIV " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case MOD:
+                return "MOD " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RET:
                 return "RET " + src1.to_str();
         }

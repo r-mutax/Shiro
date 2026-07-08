@@ -10,6 +10,9 @@ struct Token {
         NUMBER,
         PLUS,
         MINUS,
+        ASTERISK,
+        SLASH,
+        MOD,
         EOF_TOK,
     };
 
@@ -26,6 +29,12 @@ struct Token {
                 return "PLUS";
             case MINUS:
                 return "MINUS";
+            case ASTERISK:
+                return "ASTERISK";
+            case SLASH:
+                return "SLASH";
+            case MOD:
+                return "MOD";
             case EOF_TOK:
                 return "EOF";
         }

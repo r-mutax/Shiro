@@ -9,18 +9,34 @@ assert() {
     # Write code to a temporary file
     echo "$code" > tmp.shiro
 
-    # Compile Shiro source to Assembly
-    ./shiro tmp.shiro -o tmp.s 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -e "\e[31m[FAIL] Compilation failed for: $code\e[0m"
+    # Compile Shiro source to Assembly (capture stderr/stdout)
+    local compile_output
+    compile_output=$(./shiro tmp.shiro -o tmp.s 2>&1)
+    local compile_status=$?
+
+    if [ $compile_status -ne 0 ]; then
+        echo -e "\e[31m[FAIL] Compilation failed for: \"$code\"\e[0m"
+        echo -e "--- Compiler Output ---"
+        echo "$compile_output"
+        echo -e "-----------------------"
         rm -f tmp.shiro tmp.s
         exit 1
     fi
 
-    # Assemble and Link to executable
-    gcc -no-pie tmp.s -o tmp_bin 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo -e "\e[31m[FAIL] Assembly failed for: $code\e[0m"
+    # Assemble and Link to executable (capture stderr/stdout)
+    local asm_output
+    asm_output=$(gcc -no-pie tmp.s -o tmp_bin 2>&1)
+    local asm_status=$?
+
+    if [ $asm_status -ne 0 ]; then
+        echo -e "\e[31m[FAIL] Assembly failed for: \"$code\"\e[0m"
+        echo -e "--- GCC/Assembler Output ---"
+        echo "$asm_output"
+        echo -e "----------------------------"
+        # Print the generated assembly to help debug
+        echo -e "--- Generated Assembly (tmp.s) ---"
+        cat tmp.s
+        echo -e "----------------------------------"
         rm -f tmp.shiro tmp.s tmp_bin
         exit 1
     fi
@@ -49,5 +65,8 @@ assert "40 + 2" 42
 assert "222 + 323" 33
 assert "100 - 30" 70
 assert "0" 0
+assert "5 * 5" 25
+assert "10 / 2" 5
+assert "10 % 3" 1
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
