@@ -10,7 +10,7 @@ assert() {
     echo "$code" > tmp.shiro
 
     # Compile Shiro source to Assembly
-    ./shiro tmp.shiro > tmp.s 2>/dev/null
+    ./shiro tmp.shiro -o tmp.s 2>/dev/null
     if [ $? -ne 0 ]; then
         echo -e "\e[31m[FAIL] Compilation failed for: $code\e[0m"
         rm -f tmp.shiro tmp.s

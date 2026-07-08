@@ -33,6 +33,18 @@ bool Compiler::compile_file(std::string_view filename) {
 
 bool Compiler::compile_src(std::string_view src) {
 
+    std::ostream* out = &std::cout;
+    std::ofstream out_file;
+
+    if(!env.output_filename.empty() && env.output_filename != "-"){
+        out_file.open(env.output_filename.data());
+        if(!out_file.is_open()) {
+            std::cerr << "Error opening output file: " << env.output_filename << std::endl;
+            return false;
+        }
+        out = &out_file;
+    }
+
     try {
         Lexer lexer;
         TokenStream stream = lexer.lex_src(src);
@@ -57,7 +69,7 @@ bool Compiler::compile_src(std::string_view src) {
             return false;
         }
 
-        X86Generator x86_generator(ir_generator.get_program(), std::cout);
+        X86Generator x86_generator(ir_generator.get_program(), *out);
         x86_generator.generate();
 
     } catch(std::exception& e) {

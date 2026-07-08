@@ -2,8 +2,20 @@
 #define SHIRO_COMPILER_HPP
 
 #include <string_view>
+#include <string>
+struct CompilerEnvironment {
+    std::string output_filename;
+    std::string input_filename;
+
+    bool execute = false;
+    std::string execute_code;
+};
+
+
 class Compiler {
 public:
+    CompilerEnvironment env;
+
     Compiler();
     ~Compiler();
 
