@@ -48,7 +48,9 @@ struct IRInstruction {
         SUB,    // sub src2 from src1 to dst
         MUL,    // mul src1 and src2 to dst
         DIV,    // div src2 from src1 to dst
-        MOD,     // mod src2 from src1 to dst
+        MOD,    // mod src2 from src1 to dst
+        LSHIFT, // left shift src2 from src1 to dst
+        RSHIFT, // right shift src2 from src1 to dst
         RET,    // return value
     } op;
 
@@ -82,6 +84,10 @@ struct IRInstruction {
                 return "DIV " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case MOD:
                 return "MOD " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case LSHIFT:
+                return "LSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case RSHIFT:
+                return "RSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RET:
                 return "RET " + src1.to_str();
         }

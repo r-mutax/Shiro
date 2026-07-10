@@ -82,6 +82,12 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         Operand ret = Operand::Temp(next_temp++);
 
         switch(bin_op->op.type){
+            case Token::LSHIFT:
+                instructions.push_back({IRInstruction::Op::LSHIFT, ret, left, right});
+                break;
+            case Token::RSHIFT:
+                instructions.push_back({IRInstruction::Op::RSHIFT, ret, left, right});
+                break;
             case Token::PLUS:
                 instructions.push_back({IRInstruction::Op::ADD, ret, left, right});
                 break;

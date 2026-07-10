@@ -36,7 +36,18 @@ ASTNode* Parser::parseExpressionStatement(){
 }
 
 ASTNode* Parser::parseExpression(){
-    return parseAddSub();
+    return parseShift();
+}
+
+ASTNode* Parser::parseShift(){
+    auto* node = parseAddSub();
+
+    while(stream.peek().type == Token::LSHIFT || stream.peek().type == Token::RSHIFT){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseAddSub());
+    }
+
+    return node;
 }
 
 ASTNode* Parser::parseAddSub(){

@@ -71,6 +71,8 @@ assert "10 % 3" 1
 assert "(2 + 3) * 4" 20
 assert "2 * (3 + 4)" 14
 assert "(10 - 2) / (5 - 3)" 4
+assert "1 << 2" 4
+assert "4 >> 2" 1
 
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"

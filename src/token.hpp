@@ -7,14 +7,16 @@
 
 struct Token {
     enum Type {
-        NUMBER,
-        PLUS,
-        MINUS,
-        ASTERISK,
-        SLASH,
-        MOD,
-        LPAREN,
-        RPAREN,
+        NUMBER,                 // 0-9
+        PLUS,                   // +
+        MINUS,                  // -
+        ASTERISK,               // *
+        SLASH,                  // /
+        MOD,                    // %
+        LPAREN,                 // (
+        RPAREN,                 // )
+        LSHIFT,                 // <<
+        RSHIFT,                 // >>
         EOF_TOK,
     };
 
@@ -41,6 +43,10 @@ struct Token {
                 return "LPAREN";
             case RPAREN:
                 return "RPAREN";
+            case LSHIFT:
+                return "LSHIFT";
+            case RSHIFT:
+                return "RSHIFT";
             case EOF_TOK:
                 return "EOF";
         }
