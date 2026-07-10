@@ -89,11 +89,18 @@ struct IRInstruction {
     }
 };
 
+struct LiveInterval {
+    int start = -1;
+    int end = -1;
+};
+
 class IRFunction {
 public:
     std::string name;
     std::vector<IRInstruction> instructions;
     int temp_count = 0;
+
+    std::vector<LiveInterval> live_intervals;
 };
 
 class IRProgram {
