@@ -18,29 +18,35 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
   auto &free_regs = regalloc_state.free_regs;
   int instr_idx = 0;
 
-  for (auto &instr : func.instructions) {
-    // free temps used by this instruction
-    for (auto &reg : free_regs) {
-      if (reg.second != -1 &&
-          func.live_intervals[reg.second].end == instr_idx) {
-        reg.second = -1;
-      }
-    }
-
-    // assign temp register
-    auto assign_temp = [&](const Operand &op) {
-      if (op.kind == Operand::TEMP) {
-        for (size_t i = 0; i < free_regs.size(); i++) {
-          if (free_regs[i].second == -1) {
-            free_regs[i].second = op.temp_id;
-            regalloc_state.temp_to_reg[op.temp_id] = i;
-            return;
-          }
+  auto free_temp = [&](const Operand& op){
+    if(op.kind == Operand::TEMP){
+      for(auto& reg : free_regs){
+        if(reg.second == op.temp_id
+            && func.live_intervals[op.temp_id].end == instr_idx){
+          reg.second = -1;
+          break;
         }
       }
-    };
-    assign_temp(instr.dst);
+    }
+  };
 
+  auto assign_temp = [&](const Operand& op){
+    if(op.kind == Operand::TEMP){
+      for(size_t i = 0; i < free_regs.size(); i++){
+        if(free_regs[i].second == -1){
+          free_regs[i].second = op.temp_id;
+          regalloc_state.temp_to_reg[op.temp_id] = i;
+          return;
+        }
+      }
+    }
+  };
+
+  for (auto &instr : func.instructions) {
+    free_temp(instr.src1);
+    assign_temp(instr.dst);
+    free_temp(instr.dst);
+    
     instr_idx++;
   }
 

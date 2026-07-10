@@ -50,6 +50,14 @@ TokenStream Lexer::lex_src(std::string_view src) {
                 stream.tokens.push_back({Token::MOD, "%", i, 1});
                 break;
             }
+            case '(' : {
+                stream.tokens.push_back({Token::LPAREN, "(", i, 1});
+                break;
+            }
+            case ')' : {
+                stream.tokens.push_back({Token::RPAREN, ")", i, 1});
+                break;  
+            }
             case ' ':
             case '\t':
             case '\r':

@@ -40,7 +40,7 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
 
     // Compute live intervals for each temporary variable
     func.live_intervals.resize(next_temp);
-    for(int i = 0; i < instructions.size(); i++){
+    for(size_t i = 0; i < instructions.size(); i++){
         IRInstruction& instr = instructions[i];
         
         auto update_interval = [&](const Operand& op){

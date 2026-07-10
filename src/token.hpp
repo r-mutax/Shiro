@@ -13,6 +13,8 @@ struct Token {
         ASTERISK,
         SLASH,
         MOD,
+        LPAREN,
+        RPAREN,
         EOF_TOK,
     };
 
@@ -35,6 +37,10 @@ struct Token {
                 return "SLASH";
             case MOD:
                 return "MOD";
+            case LPAREN:
+                return "LPAREN";
+            case RPAREN:
+                return "RPAREN";
             case EOF_TOK:
                 return "EOF";
         }

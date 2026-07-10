@@ -68,5 +68,14 @@ ASTNode* Parser::parsePrimary(){
     if(token.type == Token::NUMBER){
         return new NumberNode(std::stoll(token.value));
     }
+
+    if(token.type == Token::LPAREN){
+        auto* node = parseExpression();
+        if(stream.next().type != Token::RPAREN){
+            throw std::runtime_error("Expected ')' after expression: " + stream.peek().to_str());
+        }
+        return node;
+    }
+
     throw std::runtime_error("Unexpected token: " + token.to_str());
 }
