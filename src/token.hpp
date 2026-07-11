@@ -17,6 +17,7 @@ struct Token {
         RPAREN,                 // )
         LSHIFT,                 // <<
         RSHIFT,                 // >>
+        SEMICOLON,              // ;
         EOF_TOK,
     };
 
@@ -47,6 +48,8 @@ struct Token {
                 return "LSHIFT";
             case RSHIFT:
                 return "RSHIFT";
+            case SEMICOLON:
+                return "SEMICOLON";
             case EOF_TOK:
                 return "EOF";
         }
@@ -74,6 +77,13 @@ public:
             throw std::runtime_error("Unexpected EOF");
         }
         return tokens[cursor++];
+    }
+
+    void expect(Token::Type type){
+        if(peek().type != type){
+            throw std::runtime_error("Expected " + peek().to_str());
+        }
+        cursor++;
     }
 
     bool is_eof(){

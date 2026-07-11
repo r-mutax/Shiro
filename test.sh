@@ -60,19 +60,20 @@ assert() {
 
 # Run tests
 echo "Running Shiro compiler tests..."
-assert "42" 42
-assert "40 + 2" 42
-assert "222 + 323" 33
-assert "100 - 30" 70
-assert "0" 0
-assert "5 * 5" 25
-assert "10 / 2" 5
-assert "10 % 3" 1
-assert "(2 + 3) * 4" 20
-assert "2 * (3 + 4)" 14
-assert "(10 - 2) / (5 - 3)" 4
-assert "1 << 2" 4
-assert "4 >> 2" 1
-
+assert "42;" 42
+assert "40 + 2;" 42
+assert "222 + 323;" 33
+assert "100 - 30;" 70
+assert "0;" 0
+assert "5 * 5;" 25
+assert "10 / 2;" 5
+assert "10 % 3;" 1
+assert "(2 + 3) * 4;" 20
+assert "2 * (3 + 4);" 14
+assert "(10 - 2) / (5 - 3);" 4
+assert "1 << 2;" 4
+assert "4 >> 2;" 1
+assert "1 + 2; 3 + 4;" 7
+assert "10 * 10; 20 / 2; 30 - 5;" 25
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"

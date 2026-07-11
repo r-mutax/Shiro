@@ -25,7 +25,10 @@ ASTNode* Parser::parseFunctionDefinition(){
     // for this version, i only support function definition of 'main'
     
     std::vector<ASTNode*> statements;
-    statements.push_back(parseExpressionStatement());
+    while(stream.peek().type != Token::EOF_TOK){
+        statements.push_back(parseExpressionStatement());
+        stream.expect(Token::SEMICOLON);
+    }
     
     return new FunctionDefinitionNode("main", statements);
 }
