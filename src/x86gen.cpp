@@ -38,8 +38,13 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
           regalloc_state.temp_to_reg[op.temp_id] = i;
           return;
         }
-      }
-    }
+      }      
+      // spill
+      regalloc_state.temp_to_reg[op.temp_id] = -1;
+      regalloc_state.temp_to_stack_offset[op.temp_id] =
+          regalloc_state.spill_offset;
+      regalloc_state.spill_offset += 8;
+    } 
   };
 
   for (auto &instr : func.instructions) {
@@ -53,26 +58,52 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
   return regalloc_state;
 }
 
-std::string X86Generator::to_x86(const Operand &op,
-                                 X86RegAllocState &regalloc_state) {
-  switch (op.kind) {
-  case Operand::INT_VAL:
-    return std::to_string(op.imm);
-  case Operand::TEMP:
-    int reg_idx = regalloc_state.temp_to_reg[op.temp_id];
-    if (reg_idx != -1) {
-      return regalloc_state.free_regs[reg_idx].first;
-    }
-    // Spill
-    int offset = regalloc_state.temp_to_stack_offset[op.temp_id];
-    if (offset == -1) {
-      offset = regalloc_state.spill_offset;
-      regalloc_state.temp_to_stack_offset[op.temp_id] = offset;
-      regalloc_state.spill_offset += 8;
-    }
-    return "QWORD PTR [rbp - " + std::to_string(offset) + "]";
+std::string X86Generator::activateDst(const Operand& op, X86RegAllocState& regalloc_state){
+  if(op.kind == Operand::INT_VAL){
+    throw std::runtime_error("Destination operand cannot be integer");
   }
-  throw std::runtime_error("Unknown operand kind");
+
+  if(regalloc_state.is_spill(op)){
+    return regalloc_state.SpillDstReg;
+  } else {
+    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  }
+}
+
+std::string X86Generator::activateSrc1(const Operand& op, X86RegAllocState& regalloc_state){
+  if(op.kind == Operand::INT_VAL){
+    return std::to_string(op.imm);
+  }
+
+  if(regalloc_state.is_spill(op)){
+    out << "  mov " << regalloc_state.SpillSrc1Reg << ", QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "]" << std::endl;
+    return regalloc_state.SpillSrc1Reg;
+  } else {
+    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  }
+}
+
+std::string X86Generator::activateSrc2(const Operand& op, X86RegAllocState& regalloc_state){
+  if(op.kind == Operand::INT_VAL){
+    return std::to_string(op.imm);
+  }
+
+  if(regalloc_state.is_spill(op)){
+    out << "  mov " << regalloc_state.SpillSrc2Reg << ", QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "]" << std::endl;
+    return regalloc_state.SpillSrc2Reg;
+  } else {
+    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  }
+}
+
+void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_state){
+  if(op.kind == Operand::INT_VAL){
+    throw std::runtime_error("Destination operand cannot be integer");
+  }
+
+  if(regalloc_state.is_spill(op)){
+    out << "  mov QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "], " << regalloc_state.SpillDstReg << std::endl;
+  }
 }
 
 void X86Generator::gen_function(const IRFunction &func) {
@@ -111,90 +142,144 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
                                    X86RegAllocState &regalloc_state) {
   switch (instr.op) {
   case IRInstruction::Op::MOV:
-    out << "  mov rax, " << to_x86(instr.src1, regalloc_state) << std::endl;
-    out << "  mov " << to_x86(instr.dst, regalloc_state) << ", rax"
-        << std::endl;
+  {
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string dst = activateDst(instr.dst, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }
+
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::LSHIFT:
-    if (!regalloc_state.is_same_temp(instr.src1, instr.dst)) {
-      out << "  mov " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src1, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
     }
 
     if (instr.src2.kind == Operand::INT_VAL) {
-      out << "  sal " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src2, regalloc_state) << std::endl;
+      out << "  sal " << dst << ", " << src2 << std::endl;
     } else {
-      out << "  mov rcx, " << to_x86(instr.src2, regalloc_state) << std::endl;
-      out << "  sal " << to_x86(instr.dst, regalloc_state) << ", cl"
+      out << "  mov rcx, " << src2 << std::endl;
+      out << "  sal " << dst << ", cl"
           << std::endl;
     }
+
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::RSHIFT:
-    if (!regalloc_state.is_same_temp(instr.src1, instr.dst)) {
-      out << "  mov " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src1, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
     }
 
     if (instr.src2.kind == Operand::INT_VAL) {
-      out << "  sar " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src2, regalloc_state) << std::endl;
+      out << "  sar " << dst << ", " << src2 << std::endl;
     } else {
-      out << "  mov rcx, " << to_x86(instr.src2, regalloc_state) << std::endl;
-      out << "  sar " << to_x86(instr.dst, regalloc_state) << ", cl"
-          << std::endl;
+      out << "  mov rcx, " << src2 << std::endl;
+      out << "  sar " << dst << ", cl" << std::endl;
     }
+
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::ADD:
-    if (!regalloc_state.is_same_temp(instr.src1, instr.dst)) {
-      out << "  mov " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src1, regalloc_state) << std::endl;
-    }
-    out << "  add " << to_x86(instr.dst, regalloc_state) << ", "
-        << to_x86(instr.src2, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  add " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::SUB:
-    if (!regalloc_state.is_same_temp(instr.src1, instr.dst)) {
-      out << "  mov " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src1, regalloc_state) << std::endl;
-    }
-    out << "  sub " << to_x86(instr.dst, regalloc_state) << ", "
-        << to_x86(instr.src2, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  sub " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::MUL:
-    if (!regalloc_state.is_same_temp(instr.src1, instr.dst)) {
-      out << "  mov " << to_x86(instr.dst, regalloc_state) << ", "
-          << to_x86(instr.src1, regalloc_state) << std::endl;
-    }
-    out << "  imul " << to_x86(instr.dst, regalloc_state) << ", "
-        << to_x86(instr.src2, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  imul " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::DIV:
-    out << "  mov rax, " << to_x86(instr.src1, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
     out << "  cqo" << std::endl;
-    if (instr.src2.kind == Operand::INT_VAL) {
-      out << "  mov rdi, " << to_x86(instr.src2, regalloc_state) << std::endl;
+
+    if(instr.src2.kind == Operand::INT_VAL){
+      out << "  mov rdi, " << src2 << std::endl;
       out << "  idiv rdi" << std::endl;
     } else {
-      out << "  idiv " << to_x86(instr.src2, regalloc_state) << std::endl;
+      out << "  idiv " << src2 << std::endl;
     }
-    out << "  mov " << to_x86(instr.dst, regalloc_state) << ", rax"
-        << std::endl;
+
+    out << "  mov " << dst << ", rax" << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::MOD:
-    out << "  mov rax, " << to_x86(instr.src1, regalloc_state) << std::endl;
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
     out << "  cqo" << std::endl;
-    if (instr.src2.kind == Operand::INT_VAL) {
-      out << "  mov rdi, " << to_x86(instr.src2, regalloc_state) << std::endl;
+
+    if(instr.src2.kind == Operand::INT_VAL){
+      out << "  mov rdi, " << src2 << std::endl;
       out << "  idiv rdi" << std::endl;
     } else {
-      out << "  idiv " << to_x86(instr.src2, regalloc_state) << std::endl;
+      out << "  idiv " << src2 << std::endl;
     }
-    out << "  mov " << to_x86(instr.dst, regalloc_state) << ", rdx"
-        << std::endl;
+
+    out << "  mov " << dst << ", rdx" << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
     break;
+  }
   case IRInstruction::Op::RET:
-    out << "  mov rax, " << to_x86(instr.src1, regalloc_state) << std::endl;
+  {
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    if(src1 != "rax"){
+      out << "  mov rax, " << src1 << std::endl;    
+    }
+  }
     break;
   default:
     throw std::runtime_error("Unknown instruction");

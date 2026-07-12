@@ -41,6 +41,16 @@ struct X86RegAllocState{
         return false;
     }
     
+    bool is_spill(const Operand& op){
+        if(op.kind != Operand::TEMP){
+            return false;
+        }
+        return temp_to_reg[op.temp_id] == -1;
+    }
+    const std::string SpillDstReg = "rsi";
+    const std::string SpillSrc1Reg = "rax";
+    const std::string SpillSrc2Reg = "rdi";
+
     // stack offset for spill
     std::vector<int> temp_to_stack_offset;
     int spill_offset = 8;
@@ -51,11 +61,16 @@ class X86Generator{
     std::ostream& out;
 
     X86RegAllocState alloc_registers(const IRFunction& func);
-    std::string to_x86(const Operand& op, X86RegAllocState& regalloc_state);
+    std::string activateDst(const Operand& op, X86RegAllocState& regalloc_state);
+    std::string activateSrc1(const Operand& op, X86RegAllocState& regalloc_state);
+    std::string activateSrc2(const Operand& op, X86RegAllocState& regalloc_state);
+    void deactivateDst(const Operand& op, X86RegAllocState& regalloc_state);
 
     void gen_function(const IRFunction& func);
     void gen_instruction(const IRInstruction& instr, X86RegAllocState& regalloc_state);
 
+    
+    
 public:
     X86Generator(const IRProgram& program, std::ostream& out = std::cout) 
         : program(program), out(out) {}
