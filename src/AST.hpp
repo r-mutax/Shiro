@@ -10,6 +10,8 @@ struct ASTNode {
         NODE_INTEGER,
         NODE_BINARY_OP,
         NODE_EXPRESSION_STATEMENT,
+        NODE_VARIABLE_DECLARE,
+        NODE_VARIABLE,
     };
 
     Type type;
@@ -49,6 +51,18 @@ struct NumberNode : public ASTNode {
     int64_t value;
 
     explicit NumberNode(int64_t value) : ASTNode(Type::NODE_INTEGER), value(value){}
+};
+
+struct VariableDeclareNode : public ASTNode {
+    std::string name;
+
+    explicit VariableDeclareNode(std::string n) : ASTNode(Type::NODE_VARIABLE_DECLARE), name(n){};
+};
+
+struct VariableNode : public ASTNode {
+    std::string name;
+
+    explicit VariableNode(std::string n) : ASTNode(Type::NODE_VARIABLE), name(n){};
 };
 
 #endif // SHIRO_AST_HPP

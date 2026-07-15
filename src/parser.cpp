@@ -26,15 +26,38 @@ ASTNode* Parser::parseFunctionDefinition(){
     
     std::vector<ASTNode*> statements;
     while(stream.peek().type != Token::EOF_TOK){
-        statements.push_back(parseExpressionStatement());
-        stream.expect(Token::SEMICOLON);
+        statements.push_back(parseStatement());
     }
     
     return new FunctionDefinitionNode("main", statements);
 }
 
+ASTNode* Parser::parseStatement(){
+    
+    if(stream.peek().type == Token::LET){
+        return parseVariableDeclare();
+    }
+
+    return parseExpressionStatement();
+}
+
+ASTNode* Parser::parseVariableDeclare(){
+    stream.expect(Token::LET);
+    Token token = stream.next();
+
+    if(token.type != Token::IDENT){
+        throw std::runtime_error("Expected IDENT after LET: " + token.to_str());
+    }
+
+    stream.expect(Token::SEMICOLON);
+    
+    return new VariableDeclareNode(token.value);
+}
+
 ASTNode* Parser::parseExpressionStatement(){
     ASTNode* expr = parseExpression();
+    stream.expect(Token::SEMICOLON);
+
     return new ExpressionStatementNode(expr);
 }
 
@@ -89,6 +112,10 @@ ASTNode* Parser::parsePrimary(){
             throw std::runtime_error("Expected ')' after expression: " + stream.peek().to_str());
         }
         return node;
+    }
+
+    if(token.type == Token::IDENT){
+        return new VariableNode(token.value);
     }
 
     throw std::runtime_error("Unexpected token: " + token.to_str());

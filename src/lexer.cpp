@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "keyword_map.h"
 #include <iostream>
 
 Lexer::Lexer() {}
@@ -70,6 +71,9 @@ TokenStream Lexer::lex_src(std::string_view src) {
       }
       break;
     }
+    case '=': {
+      stream.tokens.push_back({Token::EQUAL, "=", i, 1}); break;
+    }
     case ';': {
       stream.tokens.push_back({Token::SEMICOLON, ";", i, 1}); break;
     } case ' ':
@@ -78,6 +82,16 @@ TokenStream Lexer::lex_src(std::string_view src) {
     case '\n':
       break;
     default: {
+      if(is_ident1(c)){
+        size_t s = i;
+        while(i < len && is_ident2(src[i])){
+          i++;
+        }
+        std::string_view ident = src.substr(s, i - s);
+        stream.tokens.push_back({check_keyword(ident), std::string(ident), s, i - s });
+        i--;  
+        break;
+      }
       std::cerr << "Error: Unknown token: " << c << std::endl;
       return TokenStream{};
     }
@@ -88,3 +102,21 @@ TokenStream Lexer::lex_src(std::string_view src) {
 
   return stream;
 }
+
+bool Lexer::is_ident1(char c){
+    return isalpha(c) || c == '_';
+}
+
+bool Lexer::is_ident2(char c){
+    return is_ident1(c) || isdigit(c);
+}
+
+Token::Type Lexer::check_keyword(std::string_view s){
+    for(size_t i = 0; i < std::size(keyword_map); i++){
+        if(s == keyword_map[i].keyword){
+            return keyword_map[i].type;
+        }
+    }
+    return Token::IDENT;
+}
+

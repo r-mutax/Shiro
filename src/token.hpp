@@ -18,6 +18,9 @@ struct Token {
         LSHIFT,                 // <<
         RSHIFT,                 // >>
         SEMICOLON,              // ;
+        EQUAL,                  // =
+        LET,                    // let
+        IDENT,                  // Identifier
         EOF_TOK,
     };
 
@@ -50,6 +53,12 @@ struct Token {
                 return "RSHIFT";
             case SEMICOLON:
                 return "SEMICOLON";
+            case EQUAL:
+                return "EQUAL";
+            case LET:
+                return "LET";
+            case IDENT:
+                return "IDENT: " + value;
             case EOF_TOK:
                 return "EOF";
         }

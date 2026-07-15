@@ -2,6 +2,7 @@
 #define SHIRO_IR_HPP
 
 #include "AST.hpp"
+#include <unordered_map>
 
 struct Operand {
     enum Kind {
@@ -118,6 +119,7 @@ class IRGenerator {
     IRProgram program;
     int next_temp = 0;
     std::vector<IRInstruction> instructions;
+    std::unordered_map<std::string, int> var_to_temp;
 
     IRFunction gen_function(ASTNode* node);
     Operand gen_stmt(ASTNode* node);
