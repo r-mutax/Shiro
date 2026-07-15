@@ -119,7 +119,7 @@ class IRGenerator {
     IRProgram program;
     int next_temp = 0;
     std::vector<IRInstruction> instructions;
-    std::unordered_map<std::string, int> var_to_temp;
+    std::unordered_map<int, int> symid_to_temp;
 
     IRFunction gen_function(ASTNode* node);
     Operand gen_stmt(ASTNode* node);

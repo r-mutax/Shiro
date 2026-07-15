@@ -20,7 +20,8 @@ Statement          ::= ExpressionStatement | VariableDeclareStatement
 ExpressionStatement        ::= Expression ";"
 VariableDeclareStatement   ::= "let" Identifier ";"
 
-Expression         ::= Shift
+Expression         ::= Assign
+Assign             ::= Shift [ "=" Assign ]
 Shift              ::= AddSub ( ( "<<" | ">>" ) AddSub )*
 AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
 MulDivMod          ::= Primary ( ( "*" | "/" | "%" ) Primary )*
@@ -34,25 +35,30 @@ Number             ::= [0-9]+
 
 ## 3. Operator Precedence and Associativity
 
-Precedence increases from top to bottom. All binary operators are **left-associative**.
+Precedence increases from top to bottom. The assignment operator (`=`) is **right-associative**, while all other binary operators are **left-associative**.
 
-| Precedence | Operator | Description | Example |
-| :--- | :--- | :--- | :--- |
-| 1 (Lowest) | `<<`, `>>` | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
-| 2 | `+`, `-` | Addition, Subtraction | `x + 5` |
-| 3 | `*`, `/`, `%` | Multiplication, Division, Modulo | `10 % 3` |
-| 4 (Highest) | `( )` | Grouping (Parentheses) | `(2 + 3) * 4` |
+| Precedence | Operator | Associativity | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 (Lowest) | `=` | Right | Assignment | `y = x = 10` |
+| 2 | `<<`, `>>` | Left | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
+| 3 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
+| 4 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
+| 5 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
 
 ---
 
 ## 4. Variable Specifications
 *   **Declaration**: `let <variable_name>;`
     *   Variables are automatically initialized to `0` upon declaration (zero initialization).
+*   **Assignment**: `<lvalue> = <expression>`
+    *   Assignment is treated as an expression, returning the assigned value itself. Since it is right-associative, chained assignment like `y = x = 10` is supported.
+    *   Currently, only declared variables are valid as lvalues (left-hand side of assignments).
 *   **Scope**: 
     *   Variables are scoped to the block where they are declared (currently only the function scope is supported).
 *   **Semantic Validation Rules**:
     *   **No Duplicate Declarations**: You cannot declare variables with the same name in the same scope.
-    *   **No Undeclared Variable Usage**: You cannot use a variable before it is declared (no forward reference/post-declaration usage).
+    *   **No Undeclared Variable Usage**: You cannot read from or assign to a variable before it is declared.
+    *   **Lvalue Validation**: The left-hand side of an assignment must be an assignable expression (currently only variables).
 
 ---
 
@@ -62,12 +68,21 @@ Precedence increases from top to bottom. All binary operators are **left-associa
 ```rust
 let x;         // Initializes x to 0
 let y;         // Initializes y to 0
-y + 10;        // Evaluates to 10
-x + 5;         // The final evaluated statement (5) becomes the exit code
+x = 5;         // Assigns 5 to x
+y = x + 2;     // Assigns x + 2 (7) to y
+y;             // The final evaluated statement (7) becomes the exit code
 ```
 
-### Operator Precedence
+### Chained Assignment (Right Associativity)
 ```rust
-let a;
-(a + 2) * 3;   // Result: 6
+let x;
+let y;
+y = x = 10;    // Assigns 10 to both x and y
+x + y;         // Final evaluated statement: 20
+```
+
+### Evaluation Value of Assignment Expressions
+```rust
+let x;
+(x = 5) + 5;   // The assignment (x = 5) itself evaluates to 5, which is then added to 5. Final value: 10
 ```

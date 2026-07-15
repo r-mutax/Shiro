@@ -62,7 +62,17 @@ ASTNode* Parser::parseExpressionStatement(){
 }
 
 ASTNode* Parser::parseExpression(){
-    return parseShift();
+    return parseAssign();
+}
+
+ASTNode* Parser::parseAssign(){
+    auto* node = parseShift();
+
+    if(stream.consume(Token::EQUAL)){
+        return new AssignmentNode(node, parseAssign());
+    }
+    
+    return node;
 }
 
 ASTNode* Parser::parseShift(){

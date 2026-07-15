@@ -38,19 +38,24 @@ bool Semantics::checkNode(ASTNode* node){
         case ASTNode::NODE_VARIABLE_DECLARE:{
             auto* vd = static_cast<VariableDeclareNode*>(node);
 
-            if(!current_scope->declare(vd->name)){
-                std::cerr << "Error: Variable " << vd->name << " is already declared" << std::endl;
+            Symbol* sym = declare(vd->name);
+            if(sym == nullptr){
                 return false;
             }
+
+            vd->symbol_id = sym->id;
             return true;
         }
         case ASTNode::NODE_VARIABLE:{
             auto* vd = static_cast<VariableNode*>(node);
+            const Symbol* sym = current_scope->find_recursive(vd->name);
 
-            if(!current_scope->find_recursive(vd->name)){
+            if(sym == nullptr){
                 std::cerr << "Error: Variable " << vd->name << " is not declared" << std::endl;
                 return false;
             }
+
+            vd->symbol_id = sym->id;
             return true;
         }
         case ASTNode::NODE_INTEGER:{
@@ -63,6 +68,23 @@ bool Semantics::checkNode(ASTNode* node){
         case ASTNode::NODE_EXPRESSION_STATEMENT:{
             auto* es = static_cast<ExpressionStatementNode*>(node);
             return checkNode(es->expr);
+        }
+        case ASTNode::NODE_ASSIGNMENT:{
+            auto* as = static_cast<AssignmentNode*>(node);
+
+            if(as->lvalue->type != ASTNode::NODE_VARIABLE){
+                std::cerr << "Error: Left value of assignment is not a variable" << std::endl;
+                return false;
+            }
+
+            auto* vd = static_cast<VariableNode*>(as->lvalue);
+
+            if(!current_scope->find_recursive(vd->name)){
+                std::cerr << "Error: Variable " << vd->name << " is not declared" << std::endl;
+                return false;
+            }
+            
+            return checkNode(as->lvalue) && checkNode(as->expr);
         }
         default:
             break;

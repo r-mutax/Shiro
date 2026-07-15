@@ -28,7 +28,7 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
 
     instructions.clear();
     next_temp = 0;
-    var_to_temp.clear();
+    symid_to_temp.clear();
 
     Operand ret = Operand::IntVal(0);
     for(auto& stmt : func_def->statements){
@@ -69,7 +69,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node){
     } else if(node->type == ASTNode::NODE_VARIABLE_DECLARE){
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
         int temp = next_temp++;
-        var_to_temp[vd->name] = temp;
+        symid_to_temp[vd->symbol_id] = temp;
         instructions.push_back({IRInstruction::Op::MOV, Operand::Temp(temp), Operand::IntVal(0)});
         return Operand::Temp(temp);
     } else {
@@ -83,13 +83,25 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         return Operand::IntVal(num->value);
     } else if(node->type == ASTNode::NODE_VARIABLE){
         VariableNode* v = static_cast<VariableNode*>(node);
-        auto it = var_to_temp.find(v->name);
-        if(it == var_to_temp.end()){
+        auto it = symid_to_temp.find(v->symbol_id);
+        if(it == symid_to_temp.end()){
             throw std::runtime_error("IRGen Error: variable'" + v->name + "'not found in symbol map");
         }
-        return Operand::Temp(var_to_temp[v->name]);
-    }
-    else if(node->type == ASTNode::NODE_BINARY_OP){
+        return Operand::Temp(symid_to_temp[v->symbol_id]);
+    } else if(node->type == ASTNode::NODE_ASSIGNMENT){
+        AssignmentNode* as = static_cast<AssignmentNode*>(node);
+        VariableNode* var = static_cast<VariableNode*>(as->lvalue);
+        
+        Operand value = gen_expr(as->expr);
+        auto it = symid_to_temp.find(var->symbol_id);
+
+        if(it == symid_to_temp.end()){
+            throw std::runtime_error("IRGen Error: variable'" + var->name + "'not found in symbol map");
+        }
+        
+        instructions.push_back({IRInstruction::Op::MOV, Operand::Temp(it->second), value});
+        return value;
+    } else if(node->type == ASTNode::NODE_BINARY_OP){
         BinaryOpNode* bin_op = static_cast<BinaryOpNode*>(node);
         Operand left = gen_expr(bin_op->left);
         Operand right = gen_expr(bin_op->right);

@@ -79,5 +79,10 @@ assert "let x; x;" 0
 assert "let x; x + 42;" 42
 assert "let x; let y; x + y;" 0
 assert "let x; let y; y + 10; x + 5;" 5
+assert "let x; x = 10; x;" 10
+assert "let x; let y; x = 5; y = x + 2; y;" 7
+assert "let x; let y; y = x = 10; x + y;" 20
+assert "let x; (x = 5) + 5;" 10
+
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"

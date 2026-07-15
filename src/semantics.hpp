@@ -5,9 +5,11 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <iostream>
 
 struct Symbol {
     std::string name;
+    int id;
 };
 
 struct Scope {
@@ -35,18 +37,19 @@ struct Scope {
         return nullptr;
     }
 
-    bool declare(const std::string& name){
+    Symbol* declare(const std::string& name){
         if(find(name) != nullptr){
-            return false;
+            return nullptr;
         }
-        symbols.emplace(name, Symbol{name});
-        return true;
+        symbols.emplace(name, Symbol{name, -1});
+        return &symbols.at(name);
     }
 };
 
 class Semantics {
     Scope global_scope;
     Scope* current_scope = nullptr;
+    int symbol_id = 0;
 
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
 
@@ -63,6 +66,17 @@ class Semantics {
         if(current_scope != nullptr){
             current_scope = current_scope->parent;
         }
+    }
+
+    Symbol* declare(std::string& name){
+        Symbol* symbol = current_scope->declare(name);
+        if(symbol != nullptr){
+            symbol->id = symbol_id++;
+        } else {
+            std::cerr << "Error: Variable " << name << " is already declared" << std::endl;
+            return nullptr;
+        }
+        return symbol;
     }
 
 public:

@@ -12,6 +12,7 @@ struct ASTNode {
         NODE_EXPRESSION_STATEMENT,
         NODE_VARIABLE_DECLARE,
         NODE_VARIABLE,
+        NODE_ASSIGNMENT,
     };
 
     Type type;
@@ -38,6 +39,13 @@ struct ExpressionStatementNode : public ASTNode {
     explicit ExpressionStatementNode(ASTNode* expr) : ASTNode(Type::NODE_EXPRESSION_STATEMENT), expr(expr) {}
 };
 
+struct AssignmentNode : public ASTNode {
+    ASTNode* lvalue;
+    ASTNode* expr;
+
+    explicit AssignmentNode(ASTNode* lvalue, ASTNode* expr) : ASTNode(Type::NODE_ASSIGNMENT), lvalue(lvalue), expr(expr){}
+};
+
 struct BinaryOpNode : public ASTNode{
     Token op;
     ASTNode* left;
@@ -55,12 +63,14 @@ struct NumberNode : public ASTNode {
 
 struct VariableDeclareNode : public ASTNode {
     std::string name;
+    int symbol_id = -1;
 
     explicit VariableDeclareNode(std::string n) : ASTNode(Type::NODE_VARIABLE_DECLARE), name(n){};
 };
 
 struct VariableNode : public ASTNode {
     std::string name;
+    int symbol_id = -1;
 
     explicit VariableNode(std::string n) : ASTNode(Type::NODE_VARIABLE), name(n){};
 };

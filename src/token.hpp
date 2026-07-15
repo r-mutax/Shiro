@@ -88,6 +88,15 @@ public:
         return tokens[cursor++];
     }
 
+    bool consume(Token::Type type){
+        if(peek().type == type){
+            cursor++;
+            return true;
+        }
+
+        return false;
+    }
+    
     void expect(Token::Type type){
         if(peek().type != type){
             throw std::runtime_error("Expected " + peek().to_str());
