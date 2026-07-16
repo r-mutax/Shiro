@@ -19,7 +19,11 @@ struct Token {
         RSHIFT,                 // >>
         SEMICOLON,              // ;
         EQUAL,                  // =
+        EQUAL_EQUAL,            // ==
+        NOT_EQUAL,              // !=
         LET,                    // let
+        IF,                     // if
+        ELSE,                   // else
         IDENT,                  // Identifier
         EOF_TOK,
     };
@@ -55,8 +59,16 @@ struct Token {
                 return "SEMICOLON";
             case EQUAL:
                 return "EQUAL";
+            case EQUAL_EQUAL:
+                return "EQUAL_EQUAL";
+            case NOT_EQUAL:
+                return "NOT_EQUAL";
             case LET:
                 return "LET";
+            case IF:
+                return "if";
+            case ELSE:
+                return "else";
             case IDENT:
                 return "IDENT: " + value;
             case EOF_TOK:

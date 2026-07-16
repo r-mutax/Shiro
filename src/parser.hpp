@@ -14,11 +14,13 @@ class Parser {
     ASTNode* parseVariableDeclare();
     ASTNode* parseExpression();
     ASTNode* parseAssign();
+    ASTNode* parseEquality();
     ASTNode* parseShift();
     ASTNode* parseMulDivMod();
     ASTNode* parseAddSub();
     ASTNode* parseExpressionStatement();
     ASTNode* parsePrimary();
+    ASTNode* parseIfExpression();
 
 public:
     Parser(TokenStream& stream) : stream(stream) {}

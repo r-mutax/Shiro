@@ -6,5 +6,7 @@ typedef struct KEYWORD_MAP {
 } KEYWORD_MAP;
 
 static KEYWORD_MAP keyword_map[] = {
-    {   "let",      Token::LET },
+    {   "let",      Token::LET  },
+    {   "if",       Token::IF   },
+    {   "else",     Token::ELSE }
 };

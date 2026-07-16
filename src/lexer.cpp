@@ -72,11 +72,27 @@ TokenStream Lexer::lex_src(std::string_view src) {
       break;
     }
     case '=': {
-      stream.tokens.push_back({Token::EQUAL, "=", i, 1}); break;
+      if(i + 1 < len && src[i + 1] == '='){
+        stream.tokens.push_back({Token::EQUAL_EQUAL, "==", i, 2});
+        i++;
+      }else{
+        stream.tokens.push_back({Token::EQUAL, "=", i, 1});
+      }
+      break;
+    }
+    case '!' : {
+      if(i + 1 < len && src[i + 1] == '='){
+        stream.tokens.push_back({Token::NOT_EQUAL, "!=", i, 2});
+        i++;
+      }else{
+        throw std::runtime_error("Expected '=' after '!'");
+      }
+      break;
     }
     case ';': {
       stream.tokens.push_back({Token::SEMICOLON, ";", i, 1}); break;
-    } case ' ':
+    }
+    case ' ':
     case '\t':
     case '\r':
     case '\n':

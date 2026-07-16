@@ -8,17 +8,23 @@ struct Operand {
     enum Kind {
         TEMP,
         INT_VAL,
+        LABEL,
     } kind;
 
     int temp_id;
+    int label_id;
     int64_t imm;
 
     static Operand Temp(int id) {
-        return { TEMP, id, 0 };
+        return Operand { .kind = TEMP, .temp_id = id};
     }
 
     static Operand IntVal(int64_t imm) {
-        return { INT_VAL, 0, imm };
+        return Operand { .kind = INT_VAL, .imm = imm };
+    }
+
+    static Operand Label(int id) {
+        return Operand { .kind = LABEL, .label_id = id };
     }
 
     std::string to_str() const {
@@ -27,6 +33,8 @@ struct Operand {
                 return "T" + std::to_string(temp_id);
             case INT_VAL:
                 return std::to_string(imm);
+            case LABEL:
+                return ".L" + std::to_string(label_id);
         }
         return "UNKNOWN";
     }
@@ -37,6 +45,8 @@ struct Operand {
                 return "QWORD PTR [rbp - " + std::to_string((temp_id + 1) * 8) + "]";
             case INT_VAL:
                 return std::to_string(imm);
+            case LABEL:
+                return ".L" + std::to_string(label_id);
         }
         return "UNKNOWN";
     }
@@ -53,23 +63,16 @@ struct IRInstruction {
         LSHIFT, // left shift src2 from src1 to dst
         RSHIFT, // right shift src2 from src1 to dst
         RET,    // return value
+        EQ,     // check equal src1 and src2 to dst
+        NEQ,    // check not equal src1 and src2 to dst
+        JZ,     // jump if src1 is zero then jmp label(dst)
+        JMP,    // jump anyware to label(dst)
+        LABEL,  // label src1
     } op;
 
     Operand dst;
     Operand src1;
     Operand src2;
-
-    // constructor for binary operations like ADD, SUB
-    IRInstruction(Op op, Operand dst, Operand src1, Operand src2)
-        : op(op), dst(dst), src1(src1), src2(src2) {}
-
-    // constructor for unary operations like MOV
-    IRInstruction(Op op, Operand dst, Operand src1)
-        : op(op), dst(dst), src1(src1), src2(Operand::IntVal(0)) {}
-
-    // constructor for RET
-    IRInstruction(Op op, Operand src1)
-        : op(op), dst(Operand::IntVal(0)), src1(src1), src2(Operand::IntVal(0)) {}
 
     std::string to_str() const {
         switch(op) {
@@ -91,6 +94,16 @@ struct IRInstruction {
                 return "RSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RET:
                 return "RET " + src1.to_str();
+            case EQ:
+                return "EQ " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case NEQ:
+                return "NEQ " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case JZ:
+                return "JZ " + src1.to_str() + ", " + src2.to_str();
+            case JMP:
+                return "JMP " + src1.to_str();
+            case LABEL:
+                return "LABEL " + src1.to_str();
         }
         return "UNKNOWN";
     }
@@ -118,8 +131,72 @@ public:
 class IRGenerator {
     IRProgram program;
     int next_temp = 0;
+    int next_label = 0;
     std::vector<IRInstruction> instructions;
     std::unordered_map<int, int> symid_to_temp;
+
+    void emit(IRInstruction::Op op,
+                Operand dst = Operand::IntVal(0),
+                Operand src1 = Operand::IntVal(0),
+                Operand src2 = Operand::IntVal(0)){
+        instructions.push_back(IRInstruction{ .op = op, .dst = dst, .src1 = src1, .src2 = src2 });
+    }
+
+    void emit_mov(Operand dst, Operand src){
+        emit(IRInstruction::MOV, dst, src);
+    }
+
+    void emit_add(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::ADD, dst, src1, src2);
+    }
+
+    void emit_sub(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::SUB, dst, src1, src2);
+    }
+
+    void emit_mul(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::MUL, dst, src1, src2);
+    }
+
+    void emit_div(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::DIV, dst, src1, src2);
+    }
+
+    void emit_mod(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::MOD, dst, src1, src2);
+    }
+
+    void emit_lshift(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::LSHIFT, dst, src1, src2);
+    }
+
+    void emit_rshift(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::RSHIFT, dst, src1, src2);
+    }
+
+    void emit_ret(Operand src){
+        emit(IRInstruction::RET, Operand::IntVal(0), src);
+    }
+
+    void emit_eq(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::EQ, dst, src1, src2);
+    }
+
+    void emit_neq(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::NEQ, dst, src1, src2);
+    }
+
+    void emit_jz(Operand src, Operand label){
+        emit(IRInstruction::JZ, label, src);
+    }
+
+    void emit_jmp(Operand label){
+        emit(IRInstruction::JMP, label);
+    }
+
+    void emit_label(Operand label){
+        emit(IRInstruction::LABEL, label);
+    }
 
     IRFunction gen_function(ASTNode* node);
     Operand gen_stmt(ASTNode* node);

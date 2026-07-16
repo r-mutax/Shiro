@@ -75,6 +75,8 @@ assert "1 << 2;" 4
 assert "4 >> 2;" 1
 assert "1 + 2; 3 + 4;" 7
 assert "10 * 10; 20 / 2; 30 - 5;" 25
+assert "1 == 1;" 1
+assert "1 != 1;" 0
 assert "let x; x;" 0
 assert "let x; x + 42;" 42
 assert "let x; let y; x + y;" 0
@@ -83,6 +85,11 @@ assert "let x; x = 10; x;" 10
 assert "let x; let y; x = 5; y = x + 2; y;" 7
 assert "let x; let y; y = x = 10; x + y;" 20
 assert "let x; (x = 5) + 5;" 10
+assert "if(1) 10 else 20;" 10
+assert "if(0) 10 else 20;" 20
+assert "if(1) 10;" 10
+assert "if(0) 10;" 0
+
 
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"

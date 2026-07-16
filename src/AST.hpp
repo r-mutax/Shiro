@@ -13,6 +13,7 @@ struct ASTNode {
         NODE_VARIABLE_DECLARE,
         NODE_VARIABLE,
         NODE_ASSIGNMENT,
+        NODE_IF,
     };
 
     Type type;
@@ -73,6 +74,14 @@ struct VariableNode : public ASTNode {
     int symbol_id = -1;
 
     explicit VariableNode(std::string n) : ASTNode(Type::NODE_VARIABLE), name(n){};
+};
+
+struct IfNode : public ASTNode {
+    ASTNode* condition;
+    ASTNode* then_block;
+    ASTNode* else_block;
+
+    explicit IfNode(ASTNode* condition, ASTNode* then_block, ASTNode* else_block) : ASTNode(Type::NODE_IF), condition(condition), then_block(then_block), else_block(else_block){};
 };
 
 #endif // SHIRO_AST_HPP

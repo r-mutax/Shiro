@@ -279,8 +279,61 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     if(src1 != "rax"){
       out << "  mov rax, " << src1 << std::endl;    
     }
-  }
     break;
+  }
+  case IRInstruction::Op::EQ:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
+    out << "  mov rcx, " << src2 << std::endl;
+
+    out << "  cmp rax, rcx" << std::endl;
+    out << "  sete al" << std::endl;
+
+    out << "  movzx rax, al" << std::endl;
+    out << "  mov " << dst << ", rax" << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::NEQ:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
+    out << "  mov rcx, " << src2 << std::endl;
+
+    out << "  cmp rax, rcx" << std::endl;
+    out << "  setne al" << std::endl;
+
+    out << "  movzx rax, al" << std::endl;
+    out << "  mov " << dst << ", rax" << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::JZ:
+  {
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
+    out << "  test rax, rax" << std::endl;
+    out << "  jz .L" << instr.dst.label_id << std::endl;
+    break;
+  }
+  case IRInstruction::Op::JMP:
+  {
+    out << "  jmp .L" << instr.dst.label_id << std::endl;
+    break;
+  }
+  case IRInstruction::Op::LABEL:
+  {
+    out << ".L" << instr.dst.label_id << ":" << std::endl;
+    break;
+  }
   default:
     throw std::runtime_error("Unknown instruction");
   }

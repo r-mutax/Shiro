@@ -66,12 +66,23 @@ ASTNode* Parser::parseExpression(){
 }
 
 ASTNode* Parser::parseAssign(){
-    auto* node = parseShift();
+    auto* node = parseEquality();
 
     if(stream.consume(Token::EQUAL)){
         return new AssignmentNode(node, parseAssign());
     }
     
+    return node;
+}
+
+ASTNode* Parser::parseEquality(){
+    auto* node = parseShift();
+
+    while(stream.peek().type == Token::EQUAL_EQUAL
+        || stream.peek().type == Token::NOT_EQUAL){
+            Token tok = stream.next();
+            node = new BinaryOpNode(node, tok, parseShift());
+    }
     return node;
 }
 
@@ -116,6 +127,10 @@ ASTNode* Parser::parsePrimary(){
         return new NumberNode(std::stoll(token.value));
     }
 
+    if(token.type == Token::IF){
+        return parseIfExpression();
+    }
+
     if(token.type == Token::LPAREN){
         auto* node = parseExpression();
         if(stream.next().type != Token::RPAREN){
@@ -129,4 +144,20 @@ ASTNode* Parser::parsePrimary(){
     }
 
     throw std::runtime_error("Unexpected token: " + token.to_str());
+}
+
+ASTNode* Parser::parseIfExpression(){   
+    stream.expect(Token::LPAREN);
+    ASTNode* condition = parseExpression();
+    stream.expect(Token::RPAREN);
+
+    ASTNode* then_block = parseExpression();
+    
+    ASTNode* else_block = nullptr;
+    if(stream.peek().type == Token::ELSE){
+        stream.next();
+        else_block = parseExpression();
+    }
+
+    return new IfNode(condition, then_block, else_block);
 }

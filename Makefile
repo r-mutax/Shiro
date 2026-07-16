@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -g -MMD -MP
+CXXFLAGS = -std=c++20 -Wall -Wextra -g -MMD -MP -Wno-missing-field-initializers
 SRC = $(wildcard src/*.cpp)
 OBJDIR = obj
 OBJ = $(patsubst src/%.cpp, $(OBJDIR)/%.o, $(SRC))

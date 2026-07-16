@@ -86,6 +86,16 @@ bool Semantics::checkNode(ASTNode* node){
             
             return checkNode(as->lvalue) && checkNode(as->expr);
         }
+        case ASTNode::NODE_IF:
+        {
+            auto* if_node = static_cast<IfNode*>(node);
+            if(!checkNode(if_node->condition)) return false;
+            if(!checkNode(if_node->then_block)) return false;
+            if(if_node->else_block){
+                if(!checkNode(if_node->else_block)) return false;
+            }
+            return true;
+        }
         default:
             break;
     }

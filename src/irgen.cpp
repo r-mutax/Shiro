@@ -34,7 +34,7 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     for(auto& stmt : func_def->statements){
         ret = gen_stmt(stmt);
     }
-    instructions.push_back({IRInstruction::Op::RET, ret});
+    emit_ret(ret);
     
     func.instructions = instructions;
     func.temp_count = next_temp;
@@ -70,7 +70,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node){
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
         int temp = next_temp++;
         symid_to_temp[vd->symbol_id] = temp;
-        instructions.push_back({IRInstruction::Op::MOV, Operand::Temp(temp), Operand::IntVal(0)});
+        emit_mov(Operand::Temp(temp), Operand::IntVal(0));
         return Operand::Temp(temp);
     } else {
         throw std::runtime_error("Unexpected statement");
@@ -88,6 +88,32 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             throw std::runtime_error("IRGen Error: variable'" + v->name + "'not found in symbol map");
         }
         return Operand::Temp(symid_to_temp[v->symbol_id]);
+    } else if(node->type == ASTNode::NODE_IF){
+        IfNode* if_node = static_cast<IfNode*>(node);
+        Operand condition = gen_expr(if_node->condition);
+
+        int else_label = next_label++;
+        int end_label = next_label++;
+        Operand res_temp = Operand::Temp(next_temp++);
+
+        emit_jz(condition, Operand::Label(else_label));
+
+        // Then
+        Operand then_val = gen_expr(if_node->then_block);
+        emit_mov(res_temp, then_val);
+        emit_jmp(Operand::Label(end_label));
+
+        // else
+        emit_label(Operand::Label(else_label));
+
+        if(if_node->else_block){
+            Operand else_val = gen_expr(if_node->else_block);
+            emit_mov(res_temp, else_val);
+        } else {
+            emit_mov(res_temp, Operand::IntVal(0));
+        }
+        emit_label(Operand::Label(end_label));
+        return res_temp;
     } else if(node->type == ASTNode::NODE_ASSIGNMENT){
         AssignmentNode* as = static_cast<AssignmentNode*>(node);
         VariableNode* var = static_cast<VariableNode*>(as->lvalue);
@@ -98,8 +124,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         if(it == symid_to_temp.end()){
             throw std::runtime_error("IRGen Error: variable'" + var->name + "'not found in symbol map");
         }
-        
-        instructions.push_back({IRInstruction::Op::MOV, Operand::Temp(it->second), value});
+        emit_mov(Operand::Temp(it->second), value);
         return value;
     } else if(node->type == ASTNode::NODE_BINARY_OP){
         BinaryOpNode* bin_op = static_cast<BinaryOpNode*>(node);
@@ -108,26 +133,32 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         Operand ret = Operand::Temp(next_temp++);
 
         switch(bin_op->op.type){
+            case Token::EQUAL_EQUAL:
+                emit_eq(ret, left, right);
+                break;
+            case Token::NOT_EQUAL:
+                emit_neq(ret, left, right);
+                break;
             case Token::LSHIFT:
-                instructions.push_back({IRInstruction::Op::LSHIFT, ret, left, right});
+                emit_lshift(ret, left, right);
                 break;
             case Token::RSHIFT:
-                instructions.push_back({IRInstruction::Op::RSHIFT, ret, left, right});
+                emit_rshift(ret, left, right);
                 break;
             case Token::PLUS:
-                instructions.push_back({IRInstruction::Op::ADD, ret, left, right});
+                emit_add(ret, left, right);
                 break;
             case Token::MINUS:
-                instructions.push_back({IRInstruction::Op::SUB, ret, left, right});
+                emit_sub(ret, left, right);
                 break;
             case Token::ASTERISK:
-                instructions.push_back({IRInstruction::Op::MUL, ret, left, right});
+                emit_mul(ret, left, right);
                 break;
             case Token::SLASH:
-                instructions.push_back({IRInstruction::Op::DIV, ret, left, right});
+                emit_div(ret, left, right);
                 break;
             case Token::MOD:
-                instructions.push_back({IRInstruction::Op::MOD, ret, left, right});
+                emit_mod(ret, left, right);
                 break;
             default:
                 throw std::runtime_error("Unexpected operator: " + bin_op->op.to_str());
