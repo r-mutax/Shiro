@@ -15,6 +15,8 @@ struct Token {
         MOD,                    // %
         LPAREN,                 // (
         RPAREN,                 // )
+        LBRACE,                 // {
+        RBRACE,                 // }
         LSHIFT,                 // <<
         RSHIFT,                 // >>
         SEMICOLON,              // ;
@@ -51,6 +53,10 @@ struct Token {
                 return "LPAREN";
             case RPAREN:
                 return "RPAREN";
+            case LBRACE:
+                return "LBRACE";
+            case RBRACE:
+                return "RBRACE";
             case LSHIFT:
                 return "LSHIFT";
             case RSHIFT:

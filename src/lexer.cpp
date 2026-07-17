@@ -53,6 +53,14 @@ TokenStream Lexer::lex_src(std::string_view src) {
       stream.tokens.push_back({Token::RPAREN, ")", i, 1});
       break;
     }
+    case '{': {
+      stream.tokens.push_back({Token::LBRACE, "{", i, 1});
+      break;
+    }
+    case '}': {
+      stream.tokens.push_back({Token::RBRACE, "}", i, 1});
+      break;
+    }
     case '<': {
       if (i + 1 < len && src[i + 1] == '<') {
         stream.tokens.push_back({Token::LSHIFT, "<<", i, 2});

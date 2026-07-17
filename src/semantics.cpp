@@ -96,6 +96,22 @@ bool Semantics::checkNode(ASTNode* node){
             }
             return true;
         }
+        case ASTNode::NODE_BLOCK:
+        {
+            BlockNode* block = static_cast<BlockNode*>(node);
+            scopeIn();
+
+            bool ok = true;
+            for(auto* stmt : block->statements){
+                if(!checkNode(stmt)) {
+                    ok = false;
+                    break;
+                }
+            }
+
+            scopeOut();
+            return ok;
+        }
         default:
             break;
     }

@@ -8,6 +8,7 @@ struct ASTNode {
         NODE_TRANSLATION_UNIT,
         NODE_FUNCTION_DEFINITION,
         NODE_INTEGER,
+        NODE_BLOCK,
         NODE_BINARY_OP,
         NODE_EXPRESSION_STATEMENT,
         NODE_VARIABLE_DECLARE,
@@ -60,6 +61,12 @@ struct NumberNode : public ASTNode {
     int64_t value;
 
     explicit NumberNode(int64_t value) : ASTNode(Type::NODE_INTEGER), value(value){}
+};
+
+struct BlockNode : public ASTNode {
+    std::vector<ASTNode*> statements;
+
+    explicit BlockNode(std::vector<ASTNode*> statements) : ASTNode(Type::NODE_BLOCK), statements(statements){};
 };
 
 struct VariableDeclareNode : public ASTNode {

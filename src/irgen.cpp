@@ -132,6 +132,13 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         }
         emit_label(Operand::Label(end_label));
         return res_temp;
+    } else if(node->type == ASTNode::NODE_BLOCK){
+        BlockNode* block = static_cast<BlockNode*>(node);
+        Operand res_temp = Operand::IntVal(0);
+        for(auto* stmt : block->statements){
+            res_temp = gen_stmt(stmt);
+        }
+        return res_temp;
     } else if(node->type == ASTNode::NODE_ASSIGNMENT){
         AssignmentNode* as = static_cast<AssignmentNode*>(node);
         VariableNode* var = static_cast<VariableNode*>(as->lvalue);

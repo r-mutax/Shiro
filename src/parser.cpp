@@ -56,7 +56,13 @@ ASTNode* Parser::parseVariableDeclare(){
 
 ASTNode* Parser::parseExpressionStatement(){
     ASTNode* expr = parseExpression();
-    stream.expect(Token::SEMICOLON);
+
+    if(expr->type != ASTNode::NODE_BLOCK
+        && expr->type != ASTNode::NODE_IF){
+        stream.expect(Token::SEMICOLON);
+    } else {
+        stream.consume(Token::SEMICOLON);
+    }
 
     return new ExpressionStatementNode(expr);
 }
@@ -139,6 +145,10 @@ ASTNode* Parser::parsePrimary(){
         return node;
     }
 
+    if(token.type == Token::LBRACE){
+        return parseBlock();
+    }
+
     if(token.type == Token::IDENT){
         return new VariableNode(token.value);
     }
@@ -160,4 +170,13 @@ ASTNode* Parser::parseIfExpression(){
     }
 
     return new IfNode(condition, then_block, else_block);
+}
+
+ASTNode* Parser::parseBlock(){
+    std::vector<ASTNode*> statements;
+    while(stream.peek().type != Token::RBRACE){
+        statements.push_back(parseStatement());
+    }
+    stream.expect(Token::RBRACE);
+    return new BlockNode(statements);
 }

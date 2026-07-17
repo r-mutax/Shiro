@@ -20,6 +20,7 @@ class Parser {
     ASTNode* parseAddSub();
     ASTNode* parseExpressionStatement();
     ASTNode* parsePrimary();
+    ASTNode* parseBlock();
     ASTNode* parseIfExpression();
 
 public:

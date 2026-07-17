@@ -38,11 +38,12 @@ int main(int argc, const char *argv[]){
         compiler.env.output_filename = "a.out";
     }
 
+    bool success = false;
     if(compiler.env.execute){
-        compiler.compile_src(compiler.env.execute_code);
+        success = compiler.compile_src(compiler.env.execute_code);
     } else {
-        compiler.compile_file(compiler.env.input_filename);
+        success = compiler.compile_file(compiler.env.input_filename);
     }
     
-    return 0;
+    return success ? 0 : 1;
 }
