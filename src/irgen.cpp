@@ -10,7 +10,7 @@ bool IRGenerator::generate(ASTNode* ast) {
     TranslationUnitNode* tu = static_cast<TranslationUnitNode*>(ast);
     for(auto& def : tu->definitions){
         IRFunction func = gen_function(def);
-        program.functions.push_back(func);
+        program.functions.push_back(std::move(func));
     }
 
     return true;
@@ -36,10 +36,12 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     }
     emit_ret(ret);
     
+    func.constructCFG(instructions);
+    func.analyzeLiveness();
+
     func.instructions = instructions;
     func.temp_count = next_temp;
 
-    // Compute live intervals for each temporary variable
     func.live_intervals.resize(next_temp);
     for(size_t i = 0; i < instructions.size(); i++){
         IRInstruction& instr = instructions[i];
@@ -57,6 +59,22 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
         update_interval(instr.dst);
         update_interval(instr.src1);
         update_interval(instr.src2);
+    }
+
+    for(const auto& bb : func.blocks){
+        for(int temp : bb->live_ins){
+            // initialize live interval or update live interval 
+            if(func.live_intervals[temp].start == -1
+                || func.live_intervals[temp].start > bb->start_index){
+                    func.live_intervals[temp].start = bb->start_index;
+            }                
+        }
+
+        for(int temp : bb->live_outs){
+            if(func.live_intervals[temp].end < bb->end_index){
+                func.live_intervals[temp].end = bb->end_index;
+            }
+        }
     }
     
     return func;
@@ -180,3 +198,118 @@ void IRGenerator::dump(){
     }
 }
 
+void IRFunction::constructCFG(const std::vector<IRInstruction>& instructions){
+    blocks.clear();
+
+    if(instructions.empty()) return;
+
+    BasicBlock* bb = nullptr;
+    bool is_leader = true;      // first instruction is leader.
+
+    std::unordered_map<int, BasicBlock*> label_to_bb;
+
+    for(size_t i = 0; i < instructions.size(); ++i){
+        const auto instr = instructions[i];
+        
+        if(instr.op == IRInstruction::LABEL){
+            is_leader = true;
+        }
+
+        // check is leader instruction
+        if(is_leader){
+            bb = createBB();
+            is_leader = false;
+            bb->start_index = i;
+            if(instr.op == IRInstruction::LABEL){
+                label_to_bb[instr.dst.label_id] = bb;
+            }
+        }
+
+        bb->instructions.push_back(instr);
+        bb->end_index = i;
+
+        // set is_leader = true when meet the instruction that end a basic block
+        if(instr.op == IRInstruction::JMP || 
+           instr.op == IRInstruction::JZ  || 
+           instr.op == IRInstruction::RET
+           ){
+            is_leader = true;
+        }
+    }
+    
+    for(size_t i = 0; i < blocks.size(); ++i){
+        auto& bb = blocks[i];
+        if(bb->instructions.empty()) continue;
+
+        const auto& last_instr = bb->instructions.back();
+
+        if(last_instr.op == IRInstruction::JMP
+            || last_instr.op == IRInstruction::JZ){
+            int target_id = last_instr.dst.label_id;
+            auto it = label_to_bb.find(target_id);
+            if(it != label_to_bb.end()){
+                bb->succs.push_back(it->second);
+                it->second->preds.push_back(bb.get());
+            }
+        }
+
+        if(last_instr.op != IRInstruction::RET
+            && last_instr.op != IRInstruction::JMP){
+
+            if(i + 1 < blocks.size()){
+                BasicBlock* next_bb = blocks[i + 1].get();
+                bb->succs.push_back(next_bb);
+                next_bb->preds.push_back(bb.get());
+            }
+        }
+    }
+}
+
+void IRFunction::analyzeLiveness(){
+    for(const auto& bb : blocks){
+        for(const auto& instr : bb->instructions){
+            if(instr.src1.kind == Operand::TEMP
+                && !bb->def.contains(instr.src1.temp_id)){
+                    bb->use.insert(instr.src1.temp_id);
+                }
+            if(instr.src2.kind == Operand::TEMP
+                && !bb->def.contains(instr.src2.temp_id)){
+                    bb->use.insert(instr.src2.temp_id);
+                }
+            if((instr.op != IRInstruction::LABEL)
+                && (instr.op != IRInstruction::JMP)
+                && (instr.op != IRInstruction::JZ))
+            {
+                if(instr.dst.kind == Operand::TEMP){
+                    bb->def.insert(instr.dst.temp_id);
+                }
+            }
+        }
+    }
+
+    bool changed;
+    do {
+        changed = false;
+        for(auto it = blocks.rbegin(); it != blocks.rend(); ++it){
+            auto& bb = *it;
+
+            std::set<int> new_out;
+            for(auto succ : bb->succs){
+                new_out.insert(succ->live_ins.begin(), succ->live_ins.end());
+            }
+
+            std::set<int> new_in = bb->use;
+            for(int temp : new_out){
+                if(!bb->def.contains(temp)){
+                    new_in.insert(temp);
+                }
+            }
+
+            if(new_in != bb->live_ins || new_out != bb->live_outs) {
+                changed = true;
+                bb->live_ins = new_in;
+                bb->live_outs = new_out;
+            } 
+        }
+    }while(changed);
+}

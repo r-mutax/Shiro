@@ -3,6 +3,8 @@
 
 #include "AST.hpp"
 #include <unordered_map>
+#include <set>
+#include <memory>
 
 struct Operand {
     enum Kind {
@@ -11,7 +13,7 @@ struct Operand {
         LABEL,
     } kind;
 
-    int temp_id;
+    int temp_id;    
     int label_id;
     int64_t imm;
 
@@ -114,12 +116,42 @@ struct LiveInterval {
     int end = -1;
 };
 
+struct BasicBlock {
+    int id = -1;
+    int start_index = -1;
+    int end_index = -1;
+    
+    std::vector<IRInstruction> instructions;
+    
+    std::vector<BasicBlock*> preds;
+    std::vector<BasicBlock*> succs;
+
+    std::set<int> live_ins;
+    std::set<int> live_outs;
+    std::set<int> def;
+    std::set<int> use;
+};
+
 class IRFunction {
+    void signLeaderIR();
+
+    BasicBlock* createBB(){
+        auto bb = std::make_unique<BasicBlock>();
+        bb->id = blocks.size();
+        blocks.push_back(std::move(bb));
+        return blocks.back().get();
+    }
+
 public:
     std::string name;
+    std::vector<std::unique_ptr<BasicBlock>> blocks;
+
+    void constructCFG(const std::vector<IRInstruction>& instructions);
+    void analyzeLiveness();
+
+    //std::queue<IRInstruction> instructions;
     std::vector<IRInstruction> instructions;
     int temp_count = 0;
-
     std::vector<LiveInterval> live_intervals;
 };
 
