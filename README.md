@@ -24,7 +24,12 @@ ExpressionStatement        ::= Expression ";"
 VariableDeclareStatement   ::= "let" Identifier ";"
 
 Expression         ::= Assign
-Assign             ::= Equality [ "=" Assign ]
+Assign             ::= LogicalOr [ "=" Assign ]
+LogicalOr          ::= LogicalAnd ( "||" LogicalAnd )*
+LogicalAnd         ::= BitOr ( "&&" BitOr )*
+BitOr              ::= BitXor ( "|" BitXor )*
+BitXor             ::= BitAnd ( "^" BitAnd )*
+BitAnd             ::= Equality ( "&" Equality )*
 Equality           ::= Relational ( ( "==" | "!=" ) Relational )*
 Relational         ::= Shift ( ( "<" | "<=" | ">" | ">=" ) Shift )*
 Shift              ::= AddSub ( ( "<<" | ">>" ) AddSub )*
@@ -54,12 +59,17 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 | Precedence | Operator | Associativity | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 (Lowest) | `=` | Right | Assignment | `y = x = 10` |
-| 2 | `==`, `!=` | Left | Equality Comparisons | `x == 10` |
-| 3 | `<`, `<=`, `>`, `>=` | Left | Relational Comparisons | `x < y` |
-| 4 | `<<`, `>>` | Left | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
-| 5 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
-| 6 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
-| 7 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
+| 2 | `\|\|` | Left | Logical OR (Short-circuiting) | `x \|\| y` |
+| 3 | `&&` | Left | Logical AND (Short-circuiting) | `x && y` |
+| 4 | `\|` | Left | Bitwise OR | `x \| y` |
+| 5 | `^` | Left | Bitwise XOR | `x ^ y` |
+| 6 | `&` | Left | Bitwise AND | `x & y` |
+| 7 | `==`, `!=` | Left | Equality Comparisons | `x == 10` |
+| 8 | `<`, `<=`, `>`, `>=` | Left | Relational Comparisons | `x < y` |
+| 9 | `<<`, `>>` | Left | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
+| 10 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
+| 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
+| 12 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
 
 ---
 
@@ -78,6 +88,10 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   If the condition is non-zero (true), it evaluates to `expr1`. Otherwise (false), it evaluates to `expr2`. If `else` is omitted, a false condition evaluates to `0`.
 *   **Loops (`while` expression)**: `while(condition) expr`
     *   Repeatedly executes `expr` as long as `condition` evaluates to non-zero (true). The `while` expression evaluates to the value of the last loop body iteration (or `0` if the loop never ran).
+*   **Short-circuit Evaluation (Logical Operations)**:
+    *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation.
+    *   `&&` evaluates LHS. If LHS evaluates to `0` (false), the RHS is skipped, and it returns `0`.
+    *   `||` evaluates LHS. If LHS evaluates to non-zero (true), the RHS is skipped, and it returns `1`.
 *   **Semicolon Omission Rules**:
     *   `Block`, `IfExpression`, and `WhileExpression` placed at the top-level of statements do not require a trailing semicolon (`;`).
 *   **Semantic Validation Rules**:
@@ -131,4 +145,12 @@ while (x <= 5) {
     x = x + 1;
 }              // Computes the sum from 1 to 5
 sum;           // Evaluates to 15
+```
+
+### Bitwise Operations and Short-circuiting
+```rust
+let x;
+x = 0;
+1 || (x = 5);  // LHS is true, so RHS (x = 5) is skipped (short-circuiting)
+x;             // Evaluates to 0 (x is not overwritten with 5)
 ```
