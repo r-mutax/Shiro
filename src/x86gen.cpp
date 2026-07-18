@@ -365,6 +365,44 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     }
     break;
   }
+  case IRInstruction::Op::BNOT:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  not " << dst << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::NEG:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  neg " << dst << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::NOT:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }    
+    out << "  test " << dst << "," << dst << std::endl;
+    out << "  setz al" << std::endl;
+    out << "  movzx " << dst << ", al" << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
   case IRInstruction::Op::EQ:
   {
     std::string dst = activateDst(instr.dst, regalloc_state);

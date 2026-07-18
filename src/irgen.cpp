@@ -169,6 +169,19 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         }
         emit_mov(Operand::Temp(it->second), value);
         return value;
+    } else if(node->type == ASTNode::NODE_UNARY_OP){
+        UnaryOpNode* un_op = static_cast<UnaryOpNode*>(node);
+        Operand value = gen_expr(un_op->value);
+        Operand res_temp = Operand::Temp(next_temp++);
+
+        if(un_op->op.type == Token::NOT){
+            emit_not(res_temp, value);
+        } else if(un_op->op.type == Token::MINUS){
+            emit_neg(res_temp, value);
+        } else if(un_op->op.type == Token::CHILDA){
+            emit_bnot(res_temp, value);
+        }
+        return res_temp;
     } else if(node->type == ASTNode::NODE_BINARY_OP){
         BinaryOpNode* bin_op = static_cast<BinaryOpNode*>(node);
 

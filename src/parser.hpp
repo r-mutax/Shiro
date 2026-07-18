@@ -25,6 +25,7 @@ class Parser {
     ASTNode* parseAddSub();
     ASTNode* parseMulDivMod();
     ASTNode* parseExpressionStatement();
+    ASTNode* parseUnary();
     ASTNode* parsePrimary();
     ASTNode* parseBlock();
     ASTNode* parseIfExpression();

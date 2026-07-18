@@ -24,7 +24,6 @@ struct Token {
         HAT,                    // ^
         OR,                     // |
         OR_OR,                  // ||
-        NOT,                    // ~
         LT,                     // <
         GT,                     // >
         LE,                     // <= 
@@ -33,6 +32,8 @@ struct Token {
         EQUAL,                  // =
         EQUAL_EQUAL,            // ==
         NOT_EQUAL,              // !=
+        NOT,                    // !
+        CHILDA,                 // ~
         LET,                    // let
         IF,                     // if
         WHILE,                  // while
@@ -100,6 +101,8 @@ struct Token {
                 return "EQUAL_EQUAL";
             case NOT_EQUAL:
                 return "NOT_EQUAL";
+            case CHILDA:
+                return "CHILDA";
             case LET:
                 return "LET";
             case IF:

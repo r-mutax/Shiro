@@ -61,6 +61,10 @@ bool Semantics::checkNode(ASTNode* node){
         case ASTNode::NODE_INTEGER:{
             return true;
         }
+        case ASTNode::NODE_UNARY_OP:{
+            auto* uo = static_cast<UnaryOpNode*>(node);
+            return checkNode(uo->value);
+        }
         case ASTNode::NODE_BINARY_OP:{
             auto* bo = static_cast<BinaryOpNode*>(node);
             return checkNode(bo->left) && checkNode(bo->right);

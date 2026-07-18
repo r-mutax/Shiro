@@ -34,7 +34,8 @@ Equality           ::= Relational ( ( "==" | "!=" ) Relational )*
 Relational         ::= Shift ( ( "<" | "<=" | ">" | ">=" ) Shift )*
 Shift              ::= AddSub ( ( "<<" | ">>" ) AddSub )*
 AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
-MulDivMod          ::= Primary ( ( "*" | "/" | "%" ) Primary )*
+MulDivMod          ::= Unary ( ( "*" | "/" | "%" ) Unary )*
+Unary              ::= ( "!" | "~" | "-" ) Unary | Primary
 Primary            ::= Number 
                              | Identifier 
                              | "(" Expression ")" 
@@ -69,7 +70,8 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 | 9 | `<<`, `>>` | Left | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
 | 10 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
 | 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
-| 12 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
+| 12 | `!`, `~`, `-` | Right | Logical NOT, Bitwise NOT, Unary Minus | `-x` |
+| 13 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
 
 ---
 

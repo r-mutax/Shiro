@@ -5,6 +5,7 @@
 assert() {
     local code="$1"
     local expected="$2"
+    expected=$(( expected & 255 ))
 
     # Write code to a temporary file
     echo "$code" > tmp.shiro
@@ -130,5 +131,11 @@ assert "0 || 0;" 0
 assert "1 || 1;" 1
 assert "let x; x = 0; 0 && (x = 5); x;" 0
 assert "let x; x = 0; 1 || (x = 5); x;" 0
+assert "-5;" -5
+assert "!0;" 1
+assert "!5;" 0
+assert "~1;" -2
+assert "let x; x = 5; -x;" -5
+assert "let x; x = 0; !x;" 1
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

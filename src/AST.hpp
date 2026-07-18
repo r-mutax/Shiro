@@ -9,6 +9,7 @@ struct ASTNode {
         NODE_FUNCTION_DEFINITION,
         NODE_INTEGER,
         NODE_BLOCK,
+        NODE_UNARY_OP,
         NODE_BINARY_OP,
         NODE_EXPRESSION_STATEMENT,
         NODE_VARIABLE_DECLARE,
@@ -47,6 +48,13 @@ struct AssignmentNode : public ASTNode {
     ASTNode* expr;
 
     explicit AssignmentNode(ASTNode* lvalue, ASTNode* expr) : ASTNode(Type::NODE_ASSIGNMENT), lvalue(lvalue), expr(expr){}
+};
+
+struct UnaryOpNode : public ASTNode {
+    Token op;
+    ASTNode* value;
+
+    explicit UnaryOpNode(Token op, ASTNode* value) : ASTNode(Type::NODE_UNARY_OP), op(op), value(value){};
 };
 
 struct BinaryOpNode : public ASTNode{

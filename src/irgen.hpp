@@ -69,6 +69,9 @@ struct IRInstruction {
         BAND,   // bit and src1 and src2 to dst
         BOR,    // bit or src1 and src2 to dst
         BXOR,   // bit xor src1 and src2 to dst
+        BNOT,   // bit not src1 to dst
+        NEG,    // negate src1 to dst
+        NOT,    // logical not src1 to dst        
         RET,    // return value
         EQ,     // check equal src1 and src2 to dst
         NEQ,    // check not equal src1 and src2 to dst
@@ -110,6 +113,12 @@ struct IRInstruction {
                 return "LE " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case LT:
                 return "LT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case BNOT:
+                return "BNOT " + dst.to_str() + ", " + src1.to_str();
+            case NEG:
+                return "NEG " + dst.to_str() + ", " + src1.to_str();
+            case NOT:
+                return "NOT " + dst.to_str() + ", " + src1.to_str();
             case RET:
                 return "RET " + src1.to_str();
             case EQ:
@@ -242,6 +251,18 @@ class IRGenerator {
 
     void emit_bitxor(Operand dst, Operand src1, Operand src2){
         emit(IRInstruction::BXOR, dst, src1, src2);
+    }
+
+    void emit_bnot(Operand dst, Operand src){
+        emit(IRInstruction::BNOT, dst, src);
+    }
+
+    void emit_neg(Operand dst, Operand src){
+        emit(IRInstruction::NEG, dst, src);
+    }
+
+    void emit_not(Operand dst, Operand src){
+        emit(IRInstruction::NOT, dst, src);
     }
 
     void emit_ret(Operand src){

@@ -181,16 +181,28 @@ ASTNode* Parser::parseAddSub(){
 }
 
 ASTNode* Parser::parseMulDivMod(){
-    auto* node = parsePrimary();
+    auto* node = parseUnary();
 
     while(stream.peek().type == Token::ASTERISK
              || stream.peek().type == Token::SLASH
              || stream.peek().type == Token::MOD){
         Token op = stream.next();
-        node = new BinaryOpNode(node, op, parsePrimary());
+        node = new BinaryOpNode(node, op, parseUnary());
     }
 
     return node;
+}
+
+ASTNode* Parser::parseUnary(){
+    Token tok = stream.peek();
+    
+    if(tok.type == Token::NOT
+        || tok.type == Token::CHILDA
+        || tok.type == Token::MINUS){
+        stream.next();
+        return new UnaryOpNode(tok, parseUnary());
+    }
+    return parsePrimary();
 }
 
 ASTNode* Parser::parsePrimary(){
