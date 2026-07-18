@@ -73,12 +73,62 @@ ASTNode* Parser::parseExpression(){
 }
 
 ASTNode* Parser::parseAssign(){
-    auto* node = parseEquality();
+    auto* node = parseLogicalOr();
 
     if(stream.consume(Token::EQUAL)){
         return new AssignmentNode(node, parseAssign());
     }
     
+    return node;
+}
+
+ASTNode* Parser::parseLogicalOr(){
+    auto* node = parseLogicalAnd();
+
+    while(stream.peek().type == Token::OR_OR){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseLogicalAnd());
+    }
+    return node;
+}
+
+ASTNode* Parser::parseLogicalAnd(){
+    auto* node = parseBitOr();
+
+    while(stream.peek().type == Token::AND_AND){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseBitOr());
+    }
+    return node;
+}
+
+ASTNode* Parser::parseBitOr(){
+    auto* node = parseBitXor();
+
+    while(stream.peek().type == Token::OR){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseBitXor());
+    }
+    return node;
+}
+
+ASTNode* Parser::parseBitXor(){
+    auto* node = parseBitAnd();
+
+    while(stream.peek().type == Token::HAT){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseBitAnd());
+    }
+    return node;
+}
+
+ASTNode* Parser::parseBitAnd(){
+    auto* node = parseEquality();
+
+    while(stream.peek().type == Token::AND){
+        Token op = stream.next();
+        node = new BinaryOpNode(node, op, parseEquality());
+    }
     return node;
 }
 

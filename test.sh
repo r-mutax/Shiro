@@ -111,5 +111,24 @@ assert "let x; let y; x = 5; y = 10; x < y;" 1
 assert "let x; let y; x = 5; y = 10; x > y;" 0
 assert "let x; let sum; x = 1; sum = 0; while(x <= 5) { sum = sum + x; x = x + 1; } sum;" 15
 assert "let x; let sum; x = 1; sum = 0; while(x < 6) { sum = sum + x; x = x + 1; } sum;" 15
+assert "5 & 3;" 1
+assert "5 | 3;" 7
+assert "5 ^ 3;" 6
+assert "10 & 7;" 2
+assert "10 | 7;" 15
+assert "10 ^ 7;" 13
+assert "5 | 3 & 2;" 7
+assert "5 ^ 3 & 2;" 7
+assert "6 | 4 ^ 3;" 7
+assert "1 && 0;" 0
+assert "0 && 1;" 0
+assert "0 && 0;" 0
+assert "1 && 1;" 1
+assert "1 || 0;" 1
+assert "0 || 1;" 1
+assert "0 || 0;" 0
+assert "1 || 1;" 1
+assert "let x; x = 0; 0 && (x = 5); x;" 0
+assert "let x; x = 0; 1 || (x = 5); x;" 0
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

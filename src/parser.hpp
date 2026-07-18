@@ -14,11 +14,16 @@ class Parser {
     ASTNode* parseVariableDeclare();
     ASTNode* parseExpression();
     ASTNode* parseAssign();
+    ASTNode* parseLogicalOr();
+    ASTNode* parseLogicalAnd();
+    ASTNode* parseBitOr();
+    ASTNode* parseBitXor();
+    ASTNode* parseBitAnd();
     ASTNode* parseEquality();
     ASTNode* parseRelational();
     ASTNode* parseShift();
-    ASTNode* parseMulDivMod();
     ASTNode* parseAddSub();
+    ASTNode* parseMulDivMod();
     ASTNode* parseExpressionStatement();
     ASTNode* parsePrimary();
     ASTNode* parseBlock();

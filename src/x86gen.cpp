@@ -198,6 +198,45 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     deactivateDst(instr.dst, regalloc_state);
     break;
   }
+  case IRInstruction::Op::BAND:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }
+    out << "  and " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::BOR:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }
+    out << "  or " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::BXOR:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if(src1 != dst){
+      out << "  mov " << dst << ", " << src1 << std::endl;
+    }
+    out << "  xor " << dst << ", " << src2 << std::endl;
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
   case IRInstruction::Op::LSHIFT:
   {
     std::string dst = activateDst(instr.dst, regalloc_state);
@@ -367,6 +406,15 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     out << "  mov rax, " << src1 << std::endl;
     out << "  test rax, rax" << std::endl;
     out << "  jz .L" << instr.dst.label_id << std::endl;
+    break;
+  }
+  case IRInstruction::Op::JNZ:
+  {
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    out << "  mov rax, " << src1 << std::endl;
+    out << "  test rax, rax" << std::endl;
+    out << "  jnz .L" << instr.dst.label_id << std::endl;
     break;
   }
   case IRInstruction::Op::JMP:

@@ -19,6 +19,12 @@ struct Token {
         RBRACE,                 // }
         LSHIFT,                 // <<
         RSHIFT,                 // >>
+        AND,                    // &
+        AND_AND,                // &&
+        HAT,                    // ^
+        OR,                     // |
+        OR_OR,                  // ||
+        NOT,                    // ~
         LT,                     // <
         GT,                     // >
         LE,                     // <= 
@@ -66,6 +72,18 @@ struct Token {
                 return "LSHIFT";
             case RSHIFT:
                 return "RSHIFT";
+            case AND:
+                return "AND";
+            case AND_AND:
+                return "AND_AND";
+            case HAT:
+                return "HAT";
+            case OR:
+                return "OR";
+            case OR_OR:
+                return "OR_OR";
+            case NOT:
+                return "NOT";
             case LT:
                 return "LT";
             case GT:

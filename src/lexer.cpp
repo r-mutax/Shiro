@@ -94,12 +94,34 @@ TokenStream Lexer::lex_src(std::string_view src) {
       }
       break;
     }
-    case '!' : {
+    case '&': {
+      if(i + 1 < len && src[i + 1] == '&'){
+        stream.tokens.push_back({Token::AND_AND, "&&", i, 2});
+        i++;
+      }else{
+        stream.tokens.push_back({Token::AND, "&", i, 1});
+      }
+      break;
+    }
+    case '|': {
+      if(i + 1 < len && src[i + 1] == '|'){
+        stream.tokens.push_back({Token::OR_OR, "||", i, 2});
+        i++;
+      }else{
+        stream.tokens.push_back({Token::OR, "|", i, 1});
+      }
+      break;
+    }
+    case '^': {
+      stream.tokens.push_back({Token::HAT, "^", i, 1});
+      break;
+    }
+    case '!': {
       if(i + 1 < len && src[i + 1] == '='){
         stream.tokens.push_back({Token::NOT_EQUAL, "!=", i, 2});
         i++;
       }else{
-        throw std::runtime_error("Expected '=' after '!'");
+        stream.tokens.push_back({Token::NOT, "!", i, 1});
       }
       break;
     }

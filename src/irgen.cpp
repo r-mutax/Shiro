@@ -171,55 +171,100 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         return value;
     } else if(node->type == ASTNode::NODE_BINARY_OP){
         BinaryOpNode* bin_op = static_cast<BinaryOpNode*>(node);
-        Operand left = gen_expr(bin_op->left);
-        Operand right = gen_expr(bin_op->right);
-        Operand ret = Operand::Temp(next_temp++);
 
-        switch(bin_op->op.type){
-            case Token::EQUAL_EQUAL:
-                emit_eq(ret, left, right);
-                break;
-            case Token::NOT_EQUAL:
-                emit_neq(ret, left, right);
-                break;
-            case Token::LT:
-                emit_lt(ret, left, right);
-                break;
-            case Token::LE:
-                emit_le(ret, left, right);
-                break;
-            case Token::GT:
-                emit_lt(ret, right, left);
-                break;
-            case Token::GE:
-                emit_le(ret, right, left);
-                break;
-            case Token::LSHIFT:
-                emit_lshift(ret, left, right);
-                break;
-            case Token::RSHIFT:
-                emit_rshift(ret, left, right);
-                break;
-            case Token::PLUS:
-                emit_add(ret, left, right);
-                break;
-            case Token::MINUS:
-                emit_sub(ret, left, right);
-                break;
-            case Token::ASTERISK:
-                emit_mul(ret, left, right);
-                break;
-            case Token::SLASH:
-                emit_div(ret, left, right);
-                break;
-            case Token::MOD:
-                emit_mod(ret, left, right);
-                break;
-            default:
-                throw std::runtime_error("Unexpected operator: " + bin_op->op.to_str());
+        if(bin_op->op.type == Token::AND_AND){
+            Operand left = gen_expr(bin_op->left);
+            int false_label = next_label++;
+            int end_label = next_label++;
+            Operand res_temp = Operand::Temp(next_temp++);
+
+            emit_jz(left, Operand::Label(false_label));
+
+            Operand right = gen_expr(bin_op->right);
+            emit_jz(right, Operand::Label(false_label));
+            emit_mov(res_temp, Operand::IntVal(1));
+            emit_jmp(Operand::Label(end_label));
+
+            emit_label(Operand::Label(false_label));
+            emit_mov(res_temp, Operand::IntVal(0));
+            emit_label(Operand::Label(end_label));
+            return res_temp;
+        } else if(bin_op->op.type == Token::OR_OR){
+            Operand left = gen_expr(bin_op->left);
+            int true_label = next_label++;
+            int end_label = next_label++;
+            Operand res_temp = Operand::Temp(next_temp++);
+
+            emit_jnz(left, Operand::Label(true_label));
+            
+            Operand right = gen_expr(bin_op->right);
+            emit_jnz(right, Operand::Label(true_label));
+            emit_mov(res_temp, Operand::IntVal(0));
+            emit_jmp(Operand::Label(end_label));
+
+            emit_label(Operand::Label(true_label));
+            emit_mov(res_temp, Operand::IntVal(1));
+            emit_label(Operand::Label(end_label));
+            return res_temp;
+        } else {
+            Operand left = gen_expr(bin_op->left);
+            Operand right = gen_expr(bin_op->right);
+            Operand ret = Operand::Temp(next_temp++);
+
+            switch(bin_op->op.type){
+                case Token::OR:
+                    emit_bitor(ret, left, right);
+                    break;
+                case Token::HAT:
+                    emit_bitxor(ret, left, right);
+                    break;
+                case Token::AND:
+                    emit_bitand(ret, left, right);
+                    break;
+                case Token::EQUAL_EQUAL:
+                    emit_eq(ret, left, right);
+                    break;
+                case Token::NOT_EQUAL:
+                    emit_neq(ret, left, right);
+                    break;
+                case Token::LT:
+                    emit_lt(ret, left, right);
+                    break;
+                case Token::LE:
+                    emit_le(ret, left, right);
+                    break;
+                case Token::GT:
+                    emit_lt(ret, right, left);
+                    break;
+                case Token::GE:
+                    emit_le(ret, right, left);
+                    break;
+                case Token::LSHIFT:
+                    emit_lshift(ret, left, right);
+                    break;
+                case Token::RSHIFT:
+                    emit_rshift(ret, left, right);
+                    break;
+                case Token::PLUS:
+                    emit_add(ret, left, right);
+                    break;
+                case Token::MINUS:
+                    emit_sub(ret, left, right);
+                    break;
+                case Token::ASTERISK:
+                    emit_mul(ret, left, right);
+                    break;
+                case Token::SLASH:
+                    emit_div(ret, left, right);
+                    break;
+                case Token::MOD:
+                    emit_mod(ret, left, right);
+                    break;
+                default:
+                    throw std::runtime_error("Unexpected operator: " + bin_op->op.to_str());
+            }
+            return ret;
         }
-
-        return ret;
     }
 
     throw std::runtime_error("Expected expression");
@@ -267,7 +312,8 @@ void IRFunction::constructCFG(const std::vector<IRInstruction>& instructions){
 
         // set is_leader = true when meet the instruction that end a basic block
         if(instr.op == IRInstruction::JMP || 
-           instr.op == IRInstruction::JZ  || 
+           instr.op == IRInstruction::JZ  ||
+           instr.op == IRInstruction::JNZ ||
            instr.op == IRInstruction::RET
            ){
             is_leader = true;
@@ -281,7 +327,8 @@ void IRFunction::constructCFG(const std::vector<IRInstruction>& instructions){
         const auto& last_instr = bb->instructions.back();
 
         if(last_instr.op == IRInstruction::JMP
-            || last_instr.op == IRInstruction::JZ){
+            || last_instr.op == IRInstruction::JZ
+            || last_instr.op == IRInstruction::JNZ){
             int target_id = last_instr.dst.label_id;
             auto it = label_to_bb.find(target_id);
             if(it != label_to_bb.end()){
@@ -315,8 +362,8 @@ void IRFunction::analyzeLiveness(){
                 }
             if((instr.op != IRInstruction::LABEL)
                 && (instr.op != IRInstruction::JMP)
-                && (instr.op != IRInstruction::JZ))
-            {
+                && (instr.op != IRInstruction::JZ)
+                && (instr.op != IRInstruction::JNZ)){
                 if(instr.dst.kind == Operand::TEMP){
                     bb->def.insert(instr.dst.temp_id);
                 }

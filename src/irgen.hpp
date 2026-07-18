@@ -66,10 +66,14 @@ struct IRInstruction {
         RSHIFT, // right shift src2 from src1 to dst
         LE,     // le src1 and src2 to dst
         LT,     // lt src1 and src2 to dst
+        BAND,   // bit and src1 and src2 to dst
+        BOR,    // bit or src1 and src2 to dst
+        BXOR,   // bit xor src1 and src2 to dst
         RET,    // return value
         EQ,     // check equal src1 and src2 to dst
         NEQ,    // check not equal src1 and src2 to dst
         JZ,     // jump if src1 is zero then jmp label(dst)
+        JNZ,    // jump if src1 is not zero then jmp label(dst)
         JMP,    // jump anyware to label(dst)
         LABEL,  // label src1
     } op;
@@ -96,6 +100,12 @@ struct IRInstruction {
                 return "LSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RSHIFT:
                 return "RSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case BAND:
+                return "BAND " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case BOR:
+                return "BOR " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case BXOR:
+                return "BXOR " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case LE:
                 return "LE " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case LT:
@@ -108,6 +118,8 @@ struct IRInstruction {
                 return "NEQ " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case JZ:
                 return "JZ " + src1.to_str() + ", " + src2.to_str();
+            case JNZ:
+                return "JNZ " + src1.to_str() + ", " + src2.to_str();
             case JMP:
                 return "JMP " + src1.to_str();
             case LABEL:
@@ -220,6 +232,18 @@ class IRGenerator {
         emit(IRInstruction::LE, dst, src1, src2);
     }
 
+    void emit_bitand(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::BAND, dst, src1, src2);
+    }
+
+    void emit_bitor(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::BOR, dst, src1, src2);
+    }
+
+    void emit_bitxor(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::BXOR, dst, src1, src2);
+    }
+
     void emit_ret(Operand src){
         emit(IRInstruction::RET, Operand::IntVal(0), src);
     }
@@ -234,6 +258,10 @@ class IRGenerator {
 
     void emit_jz(Operand src, Operand label){
         emit(IRInstruction::JZ, label, src);
+    }
+
+    void emit_jnz(Operand src, Operand label){
+        emit(IRInstruction::JNZ, label, src);
     }
 
     void emit_jmp(Operand label){
