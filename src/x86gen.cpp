@@ -32,6 +32,10 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
 
   auto assign_temp = [&](const Operand &op) {
     if (op.kind == Operand::TEMP) {
+      if(regalloc_state.temp_to_reg[op.temp_id] != -1
+        || regalloc_state.temp_to_stack_offset[op.temp_id] != -1){
+          return ;
+        }
       for (size_t i = 0; i < free_regs.size(); i++) {
         if (free_regs[i].second == -1) {
           free_regs[i].second = op.temp_id;
@@ -48,8 +52,15 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
   };
 
   for (auto &instr : func.instructions) {
+
+    for (int t = 0; t < func.temp_count; t++) {
+      if (func.live_intervals[t].start == instr_idx) {
+        assign_temp(Operand::Temp(t));
+      }
+    }
     free_temp(instr.src1);
     assign_temp(instr.dst);
+    free_temp(instr.src2);
     free_temp(instr.dst);
 
     instr_idx++;

@@ -8,5 +8,6 @@ typedef struct KEYWORD_MAP {
 static KEYWORD_MAP keyword_map[] = {
     {   "let",      Token::LET  },
     {   "if",       Token::IF   },
-    {   "else",     Token::ELSE }
+    {   "else",     Token::ELSE },
+    {   "while",    Token::WHILE},
 };

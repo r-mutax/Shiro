@@ -58,7 +58,8 @@ ASTNode* Parser::parseExpressionStatement(){
     ASTNode* expr = parseExpression();
 
     if(expr->type != ASTNode::NODE_BLOCK
-        && expr->type != ASTNode::NODE_IF){
+        && expr->type != ASTNode::NODE_IF
+        && expr->type != ASTNode::NODE_WHILE){
         stream.expect(Token::SEMICOLON);
     } else {
         stream.consume(Token::SEMICOLON);
@@ -137,6 +138,10 @@ ASTNode* Parser::parsePrimary(){
         return parseIfExpression();
     }
 
+    if(token.type == Token::WHILE){
+        return parseWhileExpression();
+    }
+
     if(token.type == Token::LPAREN){
         auto* node = parseExpression();
         if(stream.next().type != Token::RPAREN){
@@ -170,6 +175,16 @@ ASTNode* Parser::parseIfExpression(){
     }
 
     return new IfNode(condition, then_block, else_block);
+}
+
+ASTNode* Parser::parseWhileExpression(){
+    stream.expect(Token::LPAREN);
+    ASTNode* condition = parseExpression();
+    stream.expect(Token::RPAREN);
+
+    ASTNode* body = parseExpression();
+
+    return new WhileNode(condition, body);
 }
 
 ASTNode* Parser::parseBlock(){

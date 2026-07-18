@@ -132,6 +132,24 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         }
         emit_label(Operand::Label(end_label));
         return res_temp;
+    } else if(node->type == ASTNode::NODE_WHILE){
+        WhileNode* while_node = static_cast<WhileNode*>(node);
+        int start_label = next_label++;
+        int end_label = next_label++;
+        Operand res_temp = Operand::Temp(next_temp++);
+
+        emit_label(Operand::Label(start_label));
+        Operand condition = gen_expr(while_node->condition);
+        emit_jz(condition, Operand::Label(end_label));
+
+        // Body
+        Operand body_val = gen_expr(while_node->body);
+        emit_mov(res_temp, body_val);
+        emit_jmp(Operand::Label(start_label));
+
+        // End
+        emit_label(Operand::Label(end_label));
+        return res_temp;
     } else if(node->type == ASTNode::NODE_BLOCK){
         BlockNode* block = static_cast<BlockNode*>(node);
         Operand res_temp = Operand::IntVal(0);

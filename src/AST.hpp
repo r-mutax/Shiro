@@ -15,6 +15,7 @@ struct ASTNode {
         NODE_VARIABLE,
         NODE_ASSIGNMENT,
         NODE_IF,
+        NODE_WHILE,
     };
 
     Type type;
@@ -89,6 +90,13 @@ struct IfNode : public ASTNode {
     ASTNode* else_block;
 
     explicit IfNode(ASTNode* condition, ASTNode* then_block, ASTNode* else_block) : ASTNode(Type::NODE_IF), condition(condition), then_block(then_block), else_block(else_block){};
+};
+
+struct WhileNode : public ASTNode {
+    ASTNode* condition;
+    ASTNode* body;
+
+    explicit WhileNode(ASTNode* condition, ASTNode* body) : ASTNode(Type::NODE_WHILE), condition(condition), body(body){};
 };
 
 #endif // SHIRO_AST_HPP

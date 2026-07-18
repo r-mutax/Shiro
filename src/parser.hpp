@@ -22,6 +22,7 @@ class Parser {
     ASTNode* parsePrimary();
     ASTNode* parseBlock();
     ASTNode* parseIfExpression();
+    ASTNode* parseWhileExpression();
 
 public:
     Parser(TokenStream& stream) : stream(stream) {}

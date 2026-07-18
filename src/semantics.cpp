@@ -96,6 +96,13 @@ bool Semantics::checkNode(ASTNode* node){
             }
             return true;
         }
+        case ASTNode::NODE_WHILE:
+        {
+            auto* while_node = static_cast<WhileNode*>(node);
+            if(!checkNode(while_node->condition)) return false;
+            if(!checkNode(while_node->body)) return false;
+            return true;
+        }
         case ASTNode::NODE_BLOCK:
         {
             BlockNode* block = static_cast<BlockNode*>(node);

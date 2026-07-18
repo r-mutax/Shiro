@@ -25,6 +25,7 @@ struct Token {
         NOT_EQUAL,              // !=
         LET,                    // let
         IF,                     // if
+        WHILE,                  // while
         ELSE,                   // else
         IDENT,                  // Identifier
         EOF_TOK,
@@ -75,6 +76,8 @@ struct Token {
                 return "if";
             case ELSE:
                 return "else";
+            case WHILE:
+                return "while";
             case IDENT:
                 return "IDENT: " + value;
             case EOF_TOK:

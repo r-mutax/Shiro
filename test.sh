@@ -92,4 +92,8 @@ assert "if(0) 10;" 0
 assert "{ 10; 20; }" 20
 assert "{ let x; x = 5; { let y; y = 10; x + y; } }" 15
 assert "let x; x = 10; if(1) { let y; y = x * 2; y + 5; } else { 0; }" 25
+assert "let x; x = 5; while(x != 0) { x = x - 1; } x;" 0
+assert "let x; let sum; x = 5; sum = 0; while(x != 0) { sum = sum + x; x = x - 1; let y; y = 99; } sum;" 15
+assert "let x; x = 0; while(x != 0) { x = 99; } x;" 0
 echo -e "\e[32mAll tests passed successfully!\e[0m"
+
