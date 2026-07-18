@@ -83,12 +83,27 @@ ASTNode* Parser::parseAssign(){
 }
 
 ASTNode* Parser::parseEquality(){
-    auto* node = parseShift();
+    auto* node = parseRelational();
 
     while(stream.peek().type == Token::EQUAL_EQUAL
         || stream.peek().type == Token::NOT_EQUAL){
             Token tok = stream.next();
-            node = new BinaryOpNode(node, tok, parseShift());
+            node = new BinaryOpNode(node, tok, parseRelational());
+    }
+    return node;
+}
+
+ASTNode* Parser::parseRelational(){
+    auto* node = parseShift();
+
+    while(true){
+        Token op = stream.peek();
+        if(op.type == Token::LT || op.type == Token::LE || op.type == Token::GT || op.type == Token::GE){
+            stream.next();
+            node = new BinaryOpNode(node, op, parseShift());
+        } else {
+            break;
+        }
     }
     return node;
 }

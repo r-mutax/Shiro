@@ -19,6 +19,10 @@ struct Token {
         RBRACE,                 // }
         LSHIFT,                 // <<
         RSHIFT,                 // >>
+        LT,                     // <
+        GT,                     // >
+        LE,                     // <= 
+        GE,                     // >= 
         SEMICOLON,              // ;
         EQUAL,                  // =
         EQUAL_EQUAL,            // ==
@@ -62,6 +66,14 @@ struct Token {
                 return "LSHIFT";
             case RSHIFT:
                 return "RSHIFT";
+            case LT:
+                return "LT";
+            case GT:
+                return "GT";
+            case LE:
+                return "LE";
+            case GE:
+                return "GE";
             case SEMICOLON:
                 return "SEMICOLON";
             case EQUAL:

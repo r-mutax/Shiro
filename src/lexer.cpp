@@ -65,8 +65,11 @@ TokenStream Lexer::lex_src(std::string_view src) {
       if (i + 1 < len && src[i + 1] == '<') {
         stream.tokens.push_back({Token::LSHIFT, "<<", i, 2});
         i++;
+      } else if (i + 1 < len && src[i + 1] == '=') {
+        stream.tokens.push_back({Token::LE, "<=", i, 2});
+        i++;
       } else {
-        throw std::runtime_error("Expected '<' after '<'");
+        stream.tokens.push_back({Token::LT, "<", i, 1});
       }
       break;
     }
@@ -74,8 +77,11 @@ TokenStream Lexer::lex_src(std::string_view src) {
       if (i + 1 < len && src[i + 1] == '>') {
         stream.tokens.push_back({Token::RSHIFT, ">>", i, 2});
         i++;
+      } else if (i + 1 < len && src[i + 1] == '=') {
+        stream.tokens.push_back({Token::GE, ">=", i, 2});
+        i++;
       } else {
-        throw std::runtime_error("Expected '>' after '>'");
+        stream.tokens.push_back({Token::GT, ">", i, 1});
       }
       break;
     }

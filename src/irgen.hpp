@@ -64,6 +64,8 @@ struct IRInstruction {
         MOD,    // mod src2 from src1 to dst
         LSHIFT, // left shift src2 from src1 to dst
         RSHIFT, // right shift src2 from src1 to dst
+        LE,     // le src1 and src2 to dst
+        LT,     // lt src1 and src2 to dst
         RET,    // return value
         EQ,     // check equal src1 and src2 to dst
         NEQ,    // check not equal src1 and src2 to dst
@@ -94,6 +96,10 @@ struct IRInstruction {
                 return "LSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RSHIFT:
                 return "RSHIFT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case LE:
+                return "LE " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
+            case LT:
+                return "LT " + dst.to_str() + ", " + src1.to_str() + ", " + src2.to_str();
             case RET:
                 return "RET " + src1.to_str();
             case EQ:
@@ -204,6 +210,14 @@ class IRGenerator {
 
     void emit_rshift(Operand dst, Operand src1, Operand src2){
         emit(IRInstruction::RSHIFT, dst, src1, src2);
+    }
+
+    void emit_lt(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::LT, dst, src1, src2);
+    }
+
+    void emit_le(Operand dst, Operand src1, Operand src2){
+        emit(IRInstruction::LE, dst, src1, src2);
     }
 
     void emit_ret(Operand src){

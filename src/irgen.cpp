@@ -182,6 +182,18 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             case Token::NOT_EQUAL:
                 emit_neq(ret, left, right);
                 break;
+            case Token::LT:
+                emit_lt(ret, left, right);
+                break;
+            case Token::LE:
+                emit_le(ret, left, right);
+                break;
+            case Token::GT:
+                emit_lt(ret, right, left);
+                break;
+            case Token::GE:
+                emit_le(ret, right, left);
+                break;
             case Token::LSHIFT:
                 emit_lshift(ret, left, right);
                 break;

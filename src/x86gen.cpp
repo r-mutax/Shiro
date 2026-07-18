@@ -164,6 +164,40 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     deactivateDst(instr.dst, regalloc_state);
     break;
   }
+  case IRInstruction::Op::LT:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if (instr.src1.kind == Operand::INT_VAL) {
+      out << "  mov rax, " << src1 << std::endl;
+      src1 = "rax";
+    }
+    out << "  cmp " << src1 << ", " << src2 << std::endl;
+    out << "  setl al" << std::endl;
+    out << "  movzx " << dst << ", al" << std::endl;
+
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::LE:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
+
+    if (instr.src1.kind == Operand::INT_VAL) {
+      out << "  mov rax, " << src1 << std::endl;
+      src1 = "rax";
+    }
+    out << "  cmp " << src1 << ", " << src2 << std::endl;
+    out << "  setle al" << std::endl;
+    out << "  movzx " << dst << ", al" << std::endl;
+
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
   case IRInstruction::Op::LSHIFT:
   {
     std::string dst = activateDst(instr.dst, regalloc_state);
