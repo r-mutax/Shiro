@@ -78,10 +78,10 @@ assert "1 + 2; 3 + 4;" 7
 assert "10 * 10; 20 / 2; 30 - 5;" 25
 assert "1 == 1;" 1
 assert "1 != 1;" 0
-assert "let x; x;" 0
-assert "let x; x + 42;" 42
-assert "let x; let y; x + y;" 0
-assert "let x; let y; y + 10; x + 5;" 5
+assert "let x; x = 0; x;" 0
+assert "let x: i64; x + 42;" 42
+assert "let x: i64; let y: i64; x + y;" 0
+assert "let x: i64; let y: i64; y + 10; x + 5;" 5
 assert "let x; x = 10; x;" 10
 assert "let x; let y; x = 5; y = x + 2; y;" 7
 assert "let x; let y; y = x = 10; x + y;" 20
@@ -145,6 +145,9 @@ assert "let x: i32; x = 10; x + 5;" 15
 assert "let x: u8; x = 200; x >> 1;" 100
 assert "let x: u32; x = 100; x / 4;" 25
 assert "let x: u8; x = 25; x % 10;" 5
+assert "let x: u16; x = 500; x;" 244
+assert "let x: i16; x = 300; x;" 44
+assert "let x: u64; x = 123456; x;" 64
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

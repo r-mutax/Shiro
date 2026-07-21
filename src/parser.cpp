@@ -48,7 +48,7 @@ ASTNode* Parser::parseVariableDeclare(){
         throw std::runtime_error("Expected IDENT after LET: " + token.to_str());
     }
 
-    std::string type_name = "i64";
+    std::string type_name = "unknown";
     if(stream.consume(Token::COLON)){
         Token type_tok = stream.next();
         type_name = type_tok.value;

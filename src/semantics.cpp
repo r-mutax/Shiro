@@ -67,6 +67,10 @@ bool Semantics::checkNode(ASTNode* node){
                 std::cerr << "Error: Variable " << vd->name << " is not declared" << std::endl;
                 return false;
             }
+            if(sym->type_info->name == "unknown"){
+                std::cerr << "Error: Cannot infer type of variable " << vd->name << " before assignment" << std::endl;
+                return false;
+            }
 
             vd->symbol_id = sym->id;
             vd->evaluated_type = sym->type_info;
@@ -127,18 +131,29 @@ bool Semantics::checkNode(ASTNode* node){
                 return false;
             }
 
-            if(!checkNode(as->lvalue)) return false;
+            auto* var_node = static_cast<VariableNode*>(as->lvalue);
+            auto* sym = (Symbol*)(current_scope->find_recursive(var_node->name));
+            if(sym == nullptr){
+                std::cerr << "Error: Variable " << var_node->name << " is not declared" << std::endl;
+                return false;
+            }
+
             if(!checkNode(as->expr)) return false;
 
-            if(as->expr->kind == ASTNode::NODE_INTEGER){
-                as->expr->evaluated_type = as->lvalue->evaluated_type;
+            if(sym->type_info->name == "unknown"){
+                sym->type_info = as->expr->evaluated_type;
+            } else if(as->expr->kind == ASTNode::NODE_INTEGER){
+                as->expr->evaluated_type = sym->type_info;
             }
+
+            var_node->symbol_id = sym->id;
+            var_node->evaluated_type = sym->type_info;
 
             if(as->lvalue->evaluated_type != as->expr->evaluated_type){
                 std::cerr << "Error: Type mismatch in assignment" << std::endl;
                 return false;
             }
-            as->evaluated_type = as->lvalue->evaluated_type;
+            as->evaluated_type = var_node->evaluated_type;
             return true;
         }
         case ASTNode::NODE_IF:
@@ -202,6 +217,7 @@ void Semantics::init_builtins(){
     u16_t = make_primitive("u16", 2, true);
     u32_t = make_primitive("u32", 4, true);
     u64_t = make_primitive("u64", 8, true);
+    unknown = make_primitive("unknown", 8, false);
 
     declare_type("i8", i8_t);
     declare_type("i16", i16_t);
@@ -211,6 +227,7 @@ void Semantics::init_builtins(){
     declare_type("u16", u16_t);
     declare_type("u32", u32_t);
     declare_type("u64", u64_t);
+    declare_type("unknown", unknown);
 }
 
 const Type* Semantics::alloc_type(Type t){

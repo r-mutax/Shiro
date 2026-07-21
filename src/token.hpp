@@ -39,14 +39,15 @@ struct Token {
         IF,                     // if
         WHILE,                  // while
         ELSE,                   // else
+        UNKNOWN,                // unknown
         I8,                     // i8
         I16,                    // i16
         I32,                    // i32
         I64,                    // i64
-        // U8,                     // u8
-        // U16,                    // u16
-        // U32,                    // u32
-        // U64,                    // u64
+        U8,                     // u8
+        U16,                    // u16
+        U32,                    // u32
+        U64,                    // u64
         IDENT,                  // Identifier
         EOF_TOK,
     };
@@ -130,6 +131,16 @@ struct Token {
                 return "i32";
             case I64:
                 return "i64";
+            case U8:
+                return "u8";
+            case U16:
+                return "u16";
+            case U32:
+                return "u32";
+            case U64:
+                return "u64";
+            case UNKNOWN:
+                return "unknown";
             case IDENT:
                 return "IDENT: " + value;
             case EOF_TOK:

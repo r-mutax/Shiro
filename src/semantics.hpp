@@ -108,6 +108,7 @@ class Semantics {
     const Type* u16_t = nullptr;
     const Type* u32_t = nullptr;
     const Type* u64_t = nullptr;
+    const Type* unknown = nullptr;
 
 public:
     Semantics() = default;

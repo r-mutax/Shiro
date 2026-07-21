@@ -2,10 +2,14 @@
 
 [日本語版はこちら (README.ja.md)](./README.ja.md)
 
-Shiro is a very simple procedural programming language and its compiler that deals exclusively with 64-bit signed integers.
+Shiro is a procedural programming language and compiler featuring a primitive integer type system and type inference.
 
 ## 1. Specifications
-*   **Data Type**: Implicitly **64-bit signed integer** (`qword`).
+*   **Data Types**:
+    *   Signed integers: `i8`, `i16`, `i32`, `i64`
+    *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
+*   **Type Inference**:
+    *   Variables declared without an explicit type annotation (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
 *   **Entry Point**: Statements in the source code are implicitly compiled into the `main` function in the assembly.
 *   **Program Exit Value**: The value of the last evaluated statement in the program becomes the exit code of the executable.
 
@@ -21,7 +25,8 @@ ExpressionStatement        ::= Expression ";"
                              | Block [ ";" ]
                              | IfExpression [ ";" ]
                              | WhileExpression [ ";" ]
-VariableDeclareStatement   ::= "let" Identifier ";"
+VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] ";"
+Type                       ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64"
 
 Expression         ::= Assign
 Assign             ::= LogicalOr [ "=" Assign ]
@@ -66,21 +71,23 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 | 5 | `^` | Left | Bitwise XOR | `x ^ y` |
 | 6 | `&` | Left | Bitwise AND | `x & y` |
 | 7 | `==`, `!=` | Left | Equality Comparisons | `x == 10` |
-| 8 | `<`, `<=`, `>`, `>=` | Left | Relational Comparisons | `x < y` |
-| 9 | `<<`, `>>` | Left | Bitwise Left Shift, Bitwise Right Shift | `1 << 2` |
+| 8 | `<`, `<=`, `>`, `>=` | Left | Relational Comparisons (Signed vs Unsigned aware) | `x < y` |
+| 9 | `<<`, `>>` | Left | Bitwise Left/Right Shift (`>>` emits `sar` for signed, `shr` for unsigned) | `x >> 1` |
 | 10 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
-| 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
+| 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo (`/`, `%` emit `idiv` for signed, `div` for unsigned) | `10 % 3` |
 | 12 | `!`, `~`, `-` | Right | Logical NOT, Bitwise NOT, Unary Minus | `-x` |
 | 13 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
 
 ---
 
 ## 4. Variables and Control Flow Specifications
-*   **Declaration**: `let <variable_name>;`
-    *   Variables are automatically initialized to `0` upon declaration (zero initialization).
+*   **Explicit Type Declaration**: `let <variable_name>: <type>;`
+    *   Declares a variable with an explicit primitive integer type (e.g., `let x: i32;`).
+*   **Type Inferred Declaration**: `let <variable_name>;`
+    *   Declares a variable without a type annotation. The type is initially `unknown` and is automatically inferred and fixed upon its first assignment (`x = expr`).
 *   **Assignment**: `<lvalue> = <expression>`
     *   Assignment is treated as an expression, returning the assigned value itself. Since it is right-associative, chained assignment like `y = x = 10` is supported.
-    *   Currently, only declared variables are valid as lvalues (left-hand side of assignments).
+    *   Assigning a value of a mismatched type to an already typed variable results in a compile-time type mismatch error.
 *   **Scope**: 
     *   Variables are scoped to the block `{ ... }` (or function scope) where they are declared.
     *   Declaring a variable inside an inner block with the same name shadows the outer variable.
@@ -92,37 +99,39 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Repeatedly executes `expr` as long as `condition` evaluates to non-zero (true). The `while` expression evaluates to the value of the last loop body iteration (or `0` if the loop never ran).
 *   **Short-circuit Evaluation (Logical Operations)**:
     *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation.
-    *   `&&` evaluates LHS. If LHS evaluates to `0` (false), the RHS is skipped, and it returns `0`.
-    *   `||` evaluates LHS. If LHS evaluates to non-zero (true), the RHS is skipped, and it returns `1`.
-*   **Semicolon Omission Rules**:
-    *   `Block`, `IfExpression`, and `WhileExpression` placed at the top-level of statements do not require a trailing semicolon (`;`).
 *   **Semantic Validation Rules**:
     *   **No Duplicate Declarations**: You cannot declare variables with the same name in the same scope.
     *   **No Undeclared Variable Usage**: You cannot read from or assign to a variable before it is declared.
-    *   **Lvalue Validation**: The left-hand side of an assignment must be an assignable expression (currently only variables).
+    *   **No Uninferred Variable Access**: Attempting to read a variable declared as `let x;` before its first assignment raises a compile-time error.
+    *   **Type Safety**: Operations or assignments between mismatched types raise compile-time errors.
 
 ---
 
 ## 5. Code Examples
 
-### Basic Operations and Variables
+### Explicit Type Declarations
 ```rust
-let x;         // Initializes x to 0
-let y;         // Initializes y to 0
-x = 5;         // Assigns 5 to x
-y = x + 2;     // Assigns x + 2 (7) to y
-y;             // The final evaluated statement (7) becomes the exit code
+let x: i32;
+x = 10;
+x + 5;         // Evaluates to 15
 ```
 
-### Block Expressions and Local Scopes
+### Type Inference
 ```rust
-let x;
-x = 5;
-{
-    let y;
-    y = 10;
-    x + y;     // The block evaluates to 15
-}              // Variable y is destroyed here
+let x;         // Type is initially unknown
+x = 42;        // Inferred as i64 on first assignment!
+x;             // Evaluates to 42
+```
+
+### Unsigned Overflow & Register Wrap-around
+```rust
+let x: u8;
+x = 200;
+let y: u8;
+y = 100;
+let z: u8;
+z = x + y;     // 200 + 100 = 300 -> Wraps around to 44 in u8!
+z;             // Evaluates to 44
 ```
 
 ### if Expressions and Semicolon Omission
@@ -136,10 +145,21 @@ if (x < 20) {
 }              // Semicolon is omitted. Evaluates to 20
 ```
 
-### while Loops
+### Block Expressions and Local Scopes
 ```rust
-let x;
-let sum;
+let x: i64;
+x = 5;
+{
+    let y: i64;
+    y = 10;
+    x + y;     // The block evaluates to 15
+}              // Variable y is destroyed here
+```
+
+### while Loops with Type Inference
+```rust
+let x;         // Inferred as i64
+let sum;       // Inferred as i64
 x = 1;
 sum = 0;
 while (x <= 5) {
@@ -147,12 +167,4 @@ while (x <= 5) {
     x = x + 1;
 }              // Computes the sum from 1 to 5
 sum;           // Evaluates to 15
-```
-
-### Bitwise Operations and Short-circuiting
-```rust
-let x;
-x = 0;
-1 || (x = 5);  // LHS is true, so RHS (x = 5) is skipped (short-circuiting)
-x;             // Evaluates to 0 (x is not overwritten with 5)
 ```
