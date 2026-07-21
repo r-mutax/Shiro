@@ -8,8 +8,12 @@
 #include <iostream>
 
 struct Symbol {
+    enum Kind { VARIABLE, TYPE } kind;
     std::string name;
     int id;
+    const Type* type_info = nullptr;
+
+    Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
 };
 
 struct Scope {
@@ -37,11 +41,11 @@ struct Scope {
         return nullptr;
     }
 
-    Symbol* declare(const std::string& name){
+    Symbol* declare(Symbol::Kind kind, const std::string& name){
         if(find(name) != nullptr){
             return nullptr;
         }
-        symbols.emplace(name, Symbol{name, -1});
+        symbols.emplace(name, Symbol{kind, name});
         return &symbols.at(name);
     }
 };
@@ -51,6 +55,7 @@ class Semantics {
     Scope* current_scope = nullptr;
     int symbol_id = 0;
 
+    std::vector<std::unique_ptr<Type>> allocated_types;
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
 
     bool checkNode(ASTNode* node);
@@ -68,16 +73,41 @@ class Semantics {
         }
     }
 
-    Symbol* declare(std::string& name){
-        Symbol* symbol = current_scope->declare(name);
+    Symbol* declare_variable(const std::string& name, const Type* type_info){
+        Symbol* symbol = current_scope->declare(Symbol::VARIABLE, name);
         if(symbol != nullptr){
             symbol->id = symbol_id++;
+            symbol->type_info = type_info;
         } else {
             std::cerr << "Error: Variable " << name << " is already declared" << std::endl;
             return nullptr;
         }
         return symbol;
     }
+
+    Symbol* declare_type(const std::string& name, const Type* type_info){
+        Symbol* symbol = current_scope->declare(Symbol::TYPE, name);
+        if(symbol != nullptr){
+            symbol->type_info = type_info;
+        } else {
+            std::cerr << "Error: Type " << name << " is already declared" << std::endl;
+            return nullptr;
+        }
+        return symbol;
+    }
+
+    const Type* alloc_type(Type t);
+    const Type* make_primitive(const std::string& name, int size, bool isUnsigned);
+    void init_builtins();
+
+    const Type* i8_t = nullptr;
+    const Type* i16_t = nullptr;
+    const Type* i32_t = nullptr;
+    const Type* i64_t = nullptr;
+    const Type* u8_t = nullptr;
+    const Type* u16_t = nullptr;
+    const Type* u32_t = nullptr;
+    const Type* u64_t = nullptr;
 
 public:
     Semantics() = default;

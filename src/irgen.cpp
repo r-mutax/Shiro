@@ -3,7 +3,7 @@
 
 bool IRGenerator::generate(ASTNode* ast) {
 
-    if(ast->type != ASTNode::NODE_TRANSLATION_UNIT) {
+    if(ast->kind != ASTNode::NODE_TRANSLATION_UNIT) {
         throw std::runtime_error("Expected translation unit");
     }
 
@@ -18,7 +18,7 @@ bool IRGenerator::generate(ASTNode* ast) {
 
 IRFunction IRGenerator::gen_function(ASTNode* node){
 
-    if(node->type != ASTNode::NODE_FUNCTION_DEFINITION) {
+    if(node->kind != ASTNode::NODE_FUNCTION_DEFINITION) {
         throw std::runtime_error("Expected function definition");
     }
 
@@ -42,17 +42,18 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     func.instructions = instructions;
     func.temp_count = next_temp;
 
-    func.live_intervals.resize(next_temp);
+    func.temp_reg_infos.resize(next_temp);
     for(size_t i = 0; i < instructions.size(); i++){
         IRInstruction& instr = instructions[i];
         
         auto update_interval = [&](const Operand& op){
             if(op.kind == Operand::TEMP){
                 int tid = op.temp_id;
-                if(func.live_intervals[tid].start == -1){
-                    func.live_intervals[tid].start = i;
+                if(func.temp_reg_infos[tid].start == -1){
+                    func.temp_reg_infos[tid].start = i;
                 }
-                func.live_intervals[tid].end = i;
+                func.temp_reg_infos[tid].end = i;
+                func.temp_reg_infos[tid].type = op.type;
             }
         };
 
@@ -64,15 +65,15 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     for(const auto& bb : func.blocks){
         for(int temp : bb->live_ins){
             // initialize live interval or update live interval 
-            if(func.live_intervals[temp].start == -1
-                || func.live_intervals[temp].start > bb->start_index){
-                    func.live_intervals[temp].start = bb->start_index;
+            if(func.temp_reg_infos[temp].start == -1
+                || func.temp_reg_infos[temp].start > bb->start_index){
+                    func.temp_reg_infos[temp].start = bb->start_index;
             }                
         }
 
         for(int temp : bb->live_outs){
-            if(func.live_intervals[temp].end < bb->end_index){
-                func.live_intervals[temp].end = bb->end_index;
+            if(func.temp_reg_infos[temp].end < bb->end_index){
+                func.temp_reg_infos[temp].end = bb->end_index;
             }
         }
     }
@@ -81,38 +82,38 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
 }
 
 Operand IRGenerator::gen_stmt(ASTNode* node){
-    if(node->type == ASTNode::NODE_EXPRESSION_STATEMENT){
+    if(node->kind == ASTNode::NODE_EXPRESSION_STATEMENT){
         ExpressionStatementNode* stmt = static_cast<ExpressionStatementNode*>(node);
         return gen_expr(stmt->expr);
-    } else if(node->type == ASTNode::NODE_VARIABLE_DECLARE){
+    } else if(node->kind == ASTNode::NODE_VARIABLE_DECLARE){
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
-        int temp = next_temp++;
-        symid_to_temp[vd->symbol_id] = temp;
-        emit_mov(Operand::Temp(temp), Operand::IntVal(0));
-        return Operand::Temp(temp);
+        Operand temp_val = Operand::Temp(next_temp++, vd->evaluated_type);
+        symid_to_temp[vd->symbol_id] = temp_val;
+        emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
+        return temp_val;
     } else {
         throw std::runtime_error("Unexpected statement");
     }
 }
 
 Operand IRGenerator::gen_expr(ASTNode* node){
-    if(node->type == ASTNode::NODE_INTEGER){
+    if(node->kind == ASTNode::NODE_INTEGER){
         NumberNode* num = static_cast<NumberNode*>(node);
         return Operand::IntVal(num->value);
-    } else if(node->type == ASTNode::NODE_VARIABLE){
+    } else if(node->kind == ASTNode::NODE_VARIABLE){
         VariableNode* v = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(v->symbol_id);
         if(it == symid_to_temp.end()){
             throw std::runtime_error("IRGen Error: variable'" + v->name + "'not found in symbol map");
         }
-        return Operand::Temp(symid_to_temp[v->symbol_id]);
-    } else if(node->type == ASTNode::NODE_IF){
+        return it->second;
+    } else if(node->kind == ASTNode::NODE_IF){
         IfNode* if_node = static_cast<IfNode*>(node);
         Operand condition = gen_expr(if_node->condition);
 
         int else_label = next_label++;
         int end_label = next_label++;
-        Operand res_temp = Operand::Temp(next_temp++);
+        Operand res_temp = Operand::Temp(next_temp++, if_node->then_block->evaluated_type);
 
         emit_jz(condition, Operand::Label(else_label));
 
@@ -132,11 +133,11 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         }
         emit_label(Operand::Label(end_label));
         return res_temp;
-    } else if(node->type == ASTNode::NODE_WHILE){
+    } else if(node->kind == ASTNode::NODE_WHILE){
         WhileNode* while_node = static_cast<WhileNode*>(node);
         int start_label = next_label++;
         int end_label = next_label++;
-        Operand res_temp = Operand::Temp(next_temp++);
+        Operand res_temp = Operand::Temp(next_temp++, while_node->evaluated_type);
 
         emit_label(Operand::Label(start_label));
         Operand condition = gen_expr(while_node->condition);
@@ -150,14 +151,14 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         // End
         emit_label(Operand::Label(end_label));
         return res_temp;
-    } else if(node->type == ASTNode::NODE_BLOCK){
+    } else if(node->kind == ASTNode::NODE_BLOCK){
         BlockNode* block = static_cast<BlockNode*>(node);
         Operand res_temp = Operand::IntVal(0);
         for(auto* stmt : block->statements){
             res_temp = gen_stmt(stmt);
         }
         return res_temp;
-    } else if(node->type == ASTNode::NODE_ASSIGNMENT){
+    } else if(node->kind == ASTNode::NODE_ASSIGNMENT){
         AssignmentNode* as = static_cast<AssignmentNode*>(node);
         VariableNode* var = static_cast<VariableNode*>(as->lvalue);
         
@@ -167,13 +168,13 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         if(it == symid_to_temp.end()){
             throw std::runtime_error("IRGen Error: variable'" + var->name + "'not found in symbol map");
         }
-        emit_mov(Operand::Temp(it->second), value);
+        emit_mov(it->second, value);
         return value;
-    } else if(node->type == ASTNode::NODE_UNARY_OP){
+    } else if(node->kind == ASTNode::NODE_UNARY_OP){
         UnaryOpNode* un_op = static_cast<UnaryOpNode*>(node);
+        Operand res_temp = Operand::Temp(next_temp++, un_op->evaluated_type);
         Operand value = gen_expr(un_op->value);
-        Operand res_temp = Operand::Temp(next_temp++);
-
+        
         if(un_op->op.type == Token::NOT){
             emit_not(res_temp, value);
         } else if(un_op->op.type == Token::MINUS){
@@ -182,14 +183,14 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             emit_bnot(res_temp, value);
         }
         return res_temp;
-    } else if(node->type == ASTNode::NODE_BINARY_OP){
+    } else if(node->kind == ASTNode::NODE_BINARY_OP){
         BinaryOpNode* bin_op = static_cast<BinaryOpNode*>(node);
 
         if(bin_op->op.type == Token::AND_AND){
             Operand left = gen_expr(bin_op->left);
             int false_label = next_label++;
             int end_label = next_label++;
-            Operand res_temp = Operand::Temp(next_temp++);
+            Operand res_temp = Operand::Temp(next_temp++, bin_op->evaluated_type);
 
             emit_jz(left, Operand::Label(false_label));
 
@@ -206,7 +207,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             Operand left = gen_expr(bin_op->left);
             int true_label = next_label++;
             int end_label = next_label++;
-            Operand res_temp = Operand::Temp(next_temp++);
+            Operand res_temp = Operand::Temp(next_temp++, bin_op->evaluated_type);
 
             emit_jnz(left, Operand::Label(true_label));
             
@@ -222,7 +223,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         } else {
             Operand left = gen_expr(bin_op->left);
             Operand right = gen_expr(bin_op->right);
-            Operand ret = Operand::Temp(next_temp++);
+            Operand ret = Operand::Temp(next_temp++, bin_op->evaluated_type);
 
             switch(bin_op->op.type){
                 case Token::OR:
@@ -366,11 +367,11 @@ void IRFunction::analyzeLiveness(){
     for(const auto& bb : blocks){
         for(const auto& instr : bb->instructions){
             if(instr.src1.kind == Operand::TEMP
-                && !bb->def.contains(instr.src1.temp_id)){
+                && !bb->def.count(instr.src1.temp_id)){
                     bb->use.insert(instr.src1.temp_id);
                 }
             if(instr.src2.kind == Operand::TEMP
-                && !bb->def.contains(instr.src2.temp_id)){
+                && !bb->def.count(instr.src2.temp_id)){
                     bb->use.insert(instr.src2.temp_id);
                 }
             if((instr.op != IRInstruction::LABEL)
@@ -397,7 +398,7 @@ void IRFunction::analyzeLiveness(){
 
             std::set<int> new_in = bb->use;
             for(int temp : new_out){
-                if(!bb->def.contains(temp)){
+                if(!bb->def.count(temp)){
                     new_in.insert(temp);
                 }
             }

@@ -22,7 +22,7 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
     if (op.kind == Operand::TEMP) {
       for (auto &reg : free_regs) {
         if (reg.second == op.temp_id &&
-            func.live_intervals[op.temp_id].end == instr_idx) {
+            func.temp_reg_infos[op.temp_id].end == instr_idx) {
           reg.second = -1;
           break;
         }
@@ -45,17 +45,19 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
       }      
       // spill
       regalloc_state.temp_to_reg[op.temp_id] = -1;
+
+      regalloc_state.spill_offset = regalloc_state.align_to(regalloc_state.spill_offset, op.type.bytes);
       regalloc_state.temp_to_stack_offset[op.temp_id] =
           regalloc_state.spill_offset;
-      regalloc_state.spill_offset += 8;
+      regalloc_state.spill_offset += op.type.bytes;
     } 
   };
 
   for (auto &instr : func.instructions) {
 
     for (int t = 0; t < func.temp_count; t++) {
-      if (func.live_intervals[t].start == instr_idx) {
-        assign_temp(Operand::Temp(t));
+      if (func.temp_reg_infos[t].start == instr_idx) {
+        assign_temp(Operand::Temp(t, func.temp_reg_infos[t].type));
       }
     }
     free_temp(instr.src1);
@@ -87,7 +89,7 @@ std::string X86Generator::activateSrc1(const Operand& op, X86RegAllocState& rega
   }
 
   if(regalloc_state.is_spill(op)){
-    out << "  mov " << regalloc_state.SpillSrc1Reg << ", QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "]" << std::endl;
+    regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc1Reg);
     return regalloc_state.SpillSrc1Reg;
   } else {
     return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
@@ -100,7 +102,7 @@ std::string X86Generator::activateSrc2(const Operand& op, X86RegAllocState& rega
   }
 
   if(regalloc_state.is_spill(op)){
-    out << "  mov " << regalloc_state.SpillSrc2Reg << ", QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "]" << std::endl;
+    regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc2Reg);
     return regalloc_state.SpillSrc2Reg;
   } else {
     return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
@@ -113,7 +115,61 @@ void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_s
   }
 
   if(regalloc_state.is_spill(op)){
-    out << "  mov QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] << "], " << regalloc_state.SpillDstReg << std::endl;
+    switch(op.type.bytes){
+      case 1:
+        out << "  mov BYTE PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] 
+          << "], " << regalloc_state.get_reg_8(regalloc_state.SpillDstReg) << std::endl;
+        break;
+      case 2:
+        out << "  mov WORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] 
+          << "], " << regalloc_state.get_reg_16(regalloc_state.SpillDstReg) << std::endl;
+        break;
+      case 4:
+        out << "  mov DWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] 
+          << "], " << regalloc_state.get_reg_32(regalloc_state.SpillDstReg) << std::endl;
+        break;
+      case 8:
+        out << "  mov QWORD PTR [rbp - " << regalloc_state.temp_to_stack_offset[op.temp_id] 
+          << "], " << regalloc_state.SpillDstReg << std::endl;
+        break;
+      default:
+        throw std::runtime_error("Invalid operand type");
+    }
+  } else {
+    std::string reg = regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first; 
+    if(op.type.isUnsigned){
+      switch(op.type.bytes){
+        case 1:
+          out << "  movzx " << reg << ", " << regalloc_state.get_reg_8(reg) << std::endl;
+          break;
+        case 2:
+          out << "  movzx " << reg << ", " << regalloc_state.get_reg_16(reg) << std::endl;
+          break;
+        case 4:
+          out << "  mov " << regalloc_state.get_reg_32(reg) << ", " << regalloc_state.get_reg_32(reg) << std::endl;
+          break;
+        case 8:
+          break;
+        default:
+          throw std::runtime_error("Invalid operand type");
+      }
+    } else {
+      switch(op.type.bytes){
+        case 1:
+          out << "  movsx " << reg << ", " << regalloc_state.get_reg_8(reg) << std::endl;
+          break;
+        case 2:
+          out << "  movsx " << reg << ", " << regalloc_state.get_reg_16(reg) << std::endl;
+          break;
+        case 4:
+          out << "  movsxd " << reg << ", " << regalloc_state.get_reg_32(reg) << std::endl;
+          break;
+        case 8:
+          break;
+        default:
+          throw std::runtime_error("Invalid operand type");
+      }
+    }
   }
 }
 
@@ -175,7 +231,11 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
       src1 = "rax";
     }
     out << "  cmp " << src1 << ", " << src2 << std::endl;
-    out << "  setl al" << std::endl;
+    if(!instr.src1.type.isUnsigned){
+      out << "  setl al" << std::endl;
+    } else {
+      out << "  setb al" << std::endl;
+    }
     out << "  movzx " << dst << ", al" << std::endl;
 
     deactivateDst(instr.dst, regalloc_state);
@@ -192,7 +252,11 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
       src1 = "rax";
     }
     out << "  cmp " << src1 << ", " << src2 << std::endl;
-    out << "  setle al" << std::endl;
+    if(!instr.src1.type.isUnsigned){
+      out << "  setle al" << std::endl;
+    } else {
+      out << "  setbe al" << std::endl;
+    }
     out << "  movzx " << dst << ", al" << std::endl;
 
     deactivateDst(instr.dst, regalloc_state);
@@ -268,11 +332,16 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
       out << "  mov " << dst << ", " << src1 << std::endl;
     }
 
-    if (instr.src2.kind == Operand::INT_VAL) {
-      out << "  sar " << dst << ", " << src2 << std::endl;
-    } else {
+    std::string rcx = src2;
+    if(instr.src2.kind == Operand::TEMP){
+      rcx = "cl";
       out << "  mov rcx, " << src2 << std::endl;
-      out << "  sar " << dst << ", cl" << std::endl;
+    }
+
+    if(instr.src1.type.isUnsigned){
+      out << "  shr " << dst << ", " << rcx << std::endl;
+    } else {
+      out << "  sar " << dst << ", " << rcx << std::endl;
     }
 
     deactivateDst(instr.dst, regalloc_state);
@@ -324,13 +393,18 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     std::string src2 = activateSrc2(instr.src2, regalloc_state);
 
     out << "  mov rax, " << src1 << std::endl;
-    out << "  cqo" << std::endl;
-
+    std::string rdi = src2;
     if(instr.src2.kind == Operand::INT_VAL){
+      rdi = "rdi";
       out << "  mov rdi, " << src2 << std::endl;
-      out << "  idiv rdi" << std::endl;
+    }
+
+    if(instr.src1.type.isUnsigned){
+      out << "  xor rdx, rdx" << std::endl;
+      out << "  div " << rdi << std::endl;
     } else {
-      out << "  idiv " << src2 << std::endl;
+      out << "  cqo" << std::endl;
+      out << "  idiv " << rdi << std::endl;
     }
 
     out << "  mov " << dst << ", rax" << std::endl;

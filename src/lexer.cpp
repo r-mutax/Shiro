@@ -127,7 +127,10 @@ TokenStream Lexer::lex_src(std::string_view src) {
     }
     case '~': {
       stream.tokens.push_back({Token::CHILDA, "~", i, 1});
-      break;
+      break;  
+    }
+    case ':': {
+      stream.tokens.push_back({Token::COLON, ":", i, 1}); break;
     }
     case ';': {
       stream.tokens.push_back({Token::SEMICOLON, ";", i, 1}); break;

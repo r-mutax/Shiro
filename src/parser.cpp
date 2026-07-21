@@ -44,22 +44,27 @@ ASTNode* Parser::parseStatement(){
 ASTNode* Parser::parseVariableDeclare(){
     stream.expect(Token::LET);
     Token token = stream.next();
-
     if(token.type != Token::IDENT){
         throw std::runtime_error("Expected IDENT after LET: " + token.to_str());
     }
 
+    std::string type_name = "i64";
+    if(stream.consume(Token::COLON)){
+        Token type_tok = stream.next();
+        type_name = type_tok.value;
+    }
+
     stream.expect(Token::SEMICOLON);
     
-    return new VariableDeclareNode(token.value);
+    return new VariableDeclareNode(token.value, type_name);
 }
 
 ASTNode* Parser::parseExpressionStatement(){
     ASTNode* expr = parseExpression();
 
-    if(expr->type != ASTNode::NODE_BLOCK
-        && expr->type != ASTNode::NODE_IF
-        && expr->type != ASTNode::NODE_WHILE){
+    if(expr->kind != ASTNode::NODE_BLOCK
+        && expr->kind != ASTNode::NODE_IF
+        && expr->kind != ASTNode::NODE_WHILE){
         stream.expect(Token::SEMICOLON);
     } else {
         stream.consume(Token::SEMICOLON);

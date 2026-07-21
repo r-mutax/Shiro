@@ -3,8 +3,14 @@
 
 #include "token.hpp"
 
+struct Type {
+    std::string name;
+    int size;
+    bool isUnsigned;
+};
+
 struct ASTNode {
-    enum Type {
+    enum Kind {
         NODE_TRANSLATION_UNIT,
         NODE_FUNCTION_DEFINITION,
         NODE_INTEGER,
@@ -19,42 +25,43 @@ struct ASTNode {
         NODE_WHILE,
     };
 
-    Type type;
+    Kind kind;
+    const Type* evaluated_type = nullptr;
 
-    explicit ASTNode(Type type) : type(type) {}
+    explicit ASTNode(Kind kind) : kind(kind) {}
 };
 
 struct TranslationUnitNode : public ASTNode {
     std::vector<ASTNode*> definitions;
 
-    explicit TranslationUnitNode() : ASTNode(Type::NODE_TRANSLATION_UNIT) {}
+    explicit TranslationUnitNode() : ASTNode(Kind::NODE_TRANSLATION_UNIT) {}
 };
 
 struct FunctionDefinitionNode : public ASTNode {
     std::string name;
     std::vector<ASTNode*> statements;
 
-    explicit FunctionDefinitionNode(std::string name, std::vector<ASTNode*> statements) : ASTNode(Type::NODE_FUNCTION_DEFINITION), name(name), statements(statements) {}
+    explicit FunctionDefinitionNode(std::string name, std::vector<ASTNode*> statements) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), name(name), statements(statements) {}
 };
 
 struct ExpressionStatementNode : public ASTNode {
     ASTNode* expr;
 
-    explicit ExpressionStatementNode(ASTNode* expr) : ASTNode(Type::NODE_EXPRESSION_STATEMENT), expr(expr) {}
+    explicit ExpressionStatementNode(ASTNode* expr) : ASTNode(Kind::NODE_EXPRESSION_STATEMENT), expr(expr) {}
 };
 
 struct AssignmentNode : public ASTNode {
     ASTNode* lvalue;
     ASTNode* expr;
 
-    explicit AssignmentNode(ASTNode* lvalue, ASTNode* expr) : ASTNode(Type::NODE_ASSIGNMENT), lvalue(lvalue), expr(expr){}
+    explicit AssignmentNode(ASTNode* lvalue, ASTNode* expr) : ASTNode(Kind::NODE_ASSIGNMENT), lvalue(lvalue), expr(expr){}
 };
 
 struct UnaryOpNode : public ASTNode {
     Token op;
     ASTNode* value;
 
-    explicit UnaryOpNode(Token op, ASTNode* value) : ASTNode(Type::NODE_UNARY_OP), op(op), value(value){};
+    explicit UnaryOpNode(Token op, ASTNode* value) : ASTNode(Kind::NODE_UNARY_OP), op(op), value(value){};
 };
 
 struct BinaryOpNode : public ASTNode{
@@ -63,33 +70,34 @@ struct BinaryOpNode : public ASTNode{
     ASTNode* right;
 
     BinaryOpNode(ASTNode* left, Token op, ASTNode* right) :
-        ASTNode(Type::NODE_BINARY_OP), op(op), left(left), right(right){}
+        ASTNode(Kind::NODE_BINARY_OP), op(op), left(left), right(right){}
 };
 
 struct NumberNode : public ASTNode {
     int64_t value;
 
-    explicit NumberNode(int64_t value) : ASTNode(Type::NODE_INTEGER), value(value){}
+    explicit NumberNode(int64_t value) : ASTNode(Kind::NODE_INTEGER), value(value){}
 };
 
 struct BlockNode : public ASTNode {
     std::vector<ASTNode*> statements;
 
-    explicit BlockNode(std::vector<ASTNode*> statements) : ASTNode(Type::NODE_BLOCK), statements(statements){};
+    explicit BlockNode(std::vector<ASTNode*> statements) : ASTNode(Kind::NODE_BLOCK), statements(statements){};
 };
 
 struct VariableDeclareNode : public ASTNode {
     std::string name;
+    std::string type_name;
     int symbol_id = -1;
 
-    explicit VariableDeclareNode(std::string n) : ASTNode(Type::NODE_VARIABLE_DECLARE), name(n){};
+    explicit VariableDeclareNode(const std::string& n, const std::string& t = "i64") : ASTNode(Kind::NODE_VARIABLE_DECLARE), name(n), type_name(t){};
 };
 
 struct VariableNode : public ASTNode {
     std::string name;
     int symbol_id = -1;
 
-    explicit VariableNode(std::string n) : ASTNode(Type::NODE_VARIABLE), name(n){};
+    explicit VariableNode(std::string n) : ASTNode(Kind::NODE_VARIABLE), name(n){};
 };
 
 struct IfNode : public ASTNode {
@@ -97,14 +105,14 @@ struct IfNode : public ASTNode {
     ASTNode* then_block;
     ASTNode* else_block;
 
-    explicit IfNode(ASTNode* condition, ASTNode* then_block, ASTNode* else_block) : ASTNode(Type::NODE_IF), condition(condition), then_block(then_block), else_block(else_block){};
+    explicit IfNode(ASTNode* condition, ASTNode* then_block, ASTNode* else_block) : ASTNode(Kind::NODE_IF), condition(condition), then_block(then_block), else_block(else_block){};
 };
 
 struct WhileNode : public ASTNode {
     ASTNode* condition;
     ASTNode* body;
 
-    explicit WhileNode(ASTNode* condition, ASTNode* body) : ASTNode(Type::NODE_WHILE), condition(condition), body(body){};
+    explicit WhileNode(ASTNode* condition, ASTNode* body) : ASTNode(Kind::NODE_WHILE), condition(condition), body(body){};
 };
 
 #endif // SHIRO_AST_HPP

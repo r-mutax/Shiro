@@ -10,4 +10,8 @@ static KEYWORD_MAP keyword_map[] = {
     {   "if",       Token::IF   },
     {   "else",     Token::ELSE },
     {   "while",    Token::WHILE},
+    {   "i8",       Token::I8   },
+    {   "i16",      Token::I16  },
+    {   "i32",      Token::I32  },
+    {   "i64",      Token::I64  },
 };

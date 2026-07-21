@@ -137,5 +137,14 @@ assert "!5;" 0
 assert "~1;" -2
 assert "let x; x = 5; -x;" -5
 assert "let x; x = 0; !x;" 1
+assert "let x: i32; x = 42; x;" 42
+assert "let x: i8; x = 10; x;" 10
+assert "let x: u8; x = 20; x;" 20
+assert "let x: i64; let y: i64; x = 5; y = 10; x + y;" 15
+assert "let x: i32; x = 10; x + 5;" 15
+assert "let x: u8; x = 200; x >> 1;" 100
+assert "let x: u32; x = 100; x / 4;" 25
+assert "let x: u8; x = 25; x % 10;" 5
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

@@ -27,7 +27,8 @@ struct Token {
         LT,                     // <
         GT,                     // >
         LE,                     // <= 
-        GE,                     // >= 
+        GE,                     // >=
+        COLON,                  // : 
         SEMICOLON,              // ;
         EQUAL,                  // =
         EQUAL_EQUAL,            // ==
@@ -38,6 +39,14 @@ struct Token {
         IF,                     // if
         WHILE,                  // while
         ELSE,                   // else
+        I8,                     // i8
+        I16,                    // i16
+        I32,                    // i32
+        I64,                    // i64
+        // U8,                     // u8
+        // U16,                    // u16
+        // U32,                    // u32
+        // U64,                    // u64
         IDENT,                  // Identifier
         EOF_TOK,
     };
@@ -93,6 +102,8 @@ struct Token {
                 return "LE";
             case GE:
                 return "GE";
+            case COLON:
+                return "COLON";
             case SEMICOLON:
                 return "SEMICOLON";
             case EQUAL:
@@ -111,6 +122,14 @@ struct Token {
                 return "else";
             case WHILE:
                 return "while";
+            case I8:
+                return "i8";
+            case I16:
+                return "i16";
+            case I32:
+                return "i32";
+            case I64:
+                return "i64";
             case IDENT:
                 return "IDENT: " + value;
             case EOF_TOK:

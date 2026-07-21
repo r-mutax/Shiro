@@ -6,6 +6,11 @@
 #include <set>
 #include <memory>
 
+struct OperandType {
+    int bytes;
+    bool isUnsigned = false;
+};
+
 struct Operand {
     enum Kind {
         TEMP,
@@ -16,13 +21,27 @@ struct Operand {
     int temp_id;    
     int label_id;
     int64_t imm;
+    OperandType type;
 
-    static Operand Temp(int id) {
-        return Operand { .kind = TEMP, .temp_id = id};
+    static OperandType to_operand_type(const Type* type){
+        if(type == nullptr){
+            return OperandType{8, false};
+        }
+
+        return OperandType{type->size, type->isUnsigned};
     }
 
-    static Operand IntVal(int64_t imm) {
-        return Operand { .kind = INT_VAL, .imm = imm };
+    static Operand Temp(int id, const Type* type) {
+        return Operand { .kind = TEMP, .temp_id = id, .type = to_operand_type(type)};
+    }
+
+    static Operand Temp(int id, const OperandType& optype){
+        return Operand { .kind = TEMP, .temp_id = id, .type = optype};
+    }
+
+    // type is nullable, i64 is default
+    static Operand IntVal(int64_t imm, const Type* type = nullptr) {
+        return Operand { .kind = INT_VAL, .imm = imm, .type = to_operand_type(type)};
     }
 
     static Operand Label(int id) {
@@ -138,9 +157,10 @@ struct IRInstruction {
     }
 };
 
-struct LiveInterval {
+struct TempRegInfo {
     int start = -1;
     int end = -1;
+    OperandType type;
 };
 
 struct BasicBlock {
@@ -179,7 +199,7 @@ public:
     //std::queue<IRInstruction> instructions;
     std::vector<IRInstruction> instructions;
     int temp_count = 0;
-    std::vector<LiveInterval> live_intervals;
+    std::vector<TempRegInfo> temp_reg_infos;
 };
 
 class IRProgram {
@@ -192,7 +212,7 @@ class IRGenerator {
     int next_temp = 0;
     int next_label = 0;
     std::vector<IRInstruction> instructions;
-    std::unordered_map<int, int> symid_to_temp;
+    std::unordered_map<int, Operand> symid_to_temp;
 
     void emit(IRInstruction::Op op,
                 Operand dst = Operand::IntVal(0),
