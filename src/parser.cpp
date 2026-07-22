@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "AST.hpp"
 
 ASTNode* Parser::parse(){
     return parseProgram();
@@ -7,29 +8,45 @@ ASTNode* Parser::parse(){
 ASTNode* Parser::parseProgram(){
     auto* node = new TranslationUnitNode();
 
-    node->definitions.push_back(parseDefinition());
-
-    if (!stream.is_eof()) {
-        throw std::runtime_error("Unexpected token after definition: " + stream.peek().to_str());
+    while (!stream.is_eof()) {
+        node->definitions.push_back(parseDefinition());
     }
 
     return node;
 }
 
 ASTNode* Parser::parseDefinition(){
-    return parseFunctionDefinition();
+    if(stream.peek().type == Token::FN){
+        return parseFunctionDefinition();
+    }
+
+    // cannnot find fn error
+    throw std::runtime_error("Expected function definition.");
 }
 
 ASTNode* Parser::parseFunctionDefinition(){
-    // now only 1 statements
-    // for this version, i only support function definition of 'main'
-    
-    std::vector<ASTNode*> statements;
-    while(stream.peek().type != Token::EOF_TOK){
-        statements.push_back(parseStatement());
+    stream.expect(Token::FN);
+    Token token = stream.next();
+    if(token.type != Token::IDENT){
+        throw std::runtime_error("Expected IDENT after fn: " + token.to_str());
     }
+
+    stream.expect(Token::LPAREN);
+    stream.expect(Token::RPAREN);
+
+    stream.expect(Token::ARROW);
+
+    // 次のトークンが型名の候補（予約語 or IDENT）かチェックする
+    Token ty_tok = stream.next();
+    if(!ty_tok.isTypeCandidate()){
+        throw std::runtime_error("Expected type after ->: " + ty_tok.to_str());
+    }
+    std::string type_name = ty_tok.value;
     
-    return new FunctionDefinitionNode("main", statements);
+    stream.expect(Token::LBRACE);
+    ASTNode* block = parseBlock();
+    
+    return new FunctionDefinitionNode(token.value, type_name, static_cast<BlockNode*>(block));
 }
 
 ASTNode* Parser::parseStatement(){

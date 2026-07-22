@@ -30,7 +30,12 @@ TokenStream Lexer::lex_src(std::string_view src) {
       break;
     }
     case '-': {
-      stream.tokens.push_back({Token::MINUS, "-", i, 1});
+      if(i + 1 < len && src[i + 1] == '>'){
+        stream.tokens.push_back({Token::ARROW, "->", i, 2});
+        i++;
+      } else {
+        stream.tokens.push_back({Token::MINUS, "-", i, 1});
+      }
       break;
     }
     case '*': {

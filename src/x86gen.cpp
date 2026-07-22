@@ -195,12 +195,23 @@ void X86Generator::gen_function(const IRFunction &func) {
   out << "  push rbp\n";
   out << "  mov rbp, rsp\n";
   out << "  sub rsp, " << stack_size << "\n";
+  out << "  push rbx\n";
+  out << "  push r12\n";
+  out << "  push r13\n";
+  out << "  push r14\n";
+  out << "  push r15\n";
 
   for (auto &instr : func.instructions) {
     gen_instruction(instr, regalloc_state);
   }
 
   // epilogue
+  out << ".L." << func.name << ".return:\n";
+  out << "  pop r15\n";
+  out << "  pop r14\n";
+  out << "  pop r13\n";
+  out << "  pop r12\n";
+  out << "  pop rbx\n";
   out << "  leave\n";
   out << "  ret\n";
 }

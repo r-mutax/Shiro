@@ -31,19 +31,6 @@ struct ASTNode {
     explicit ASTNode(Kind kind) : kind(kind) {}
 };
 
-struct TranslationUnitNode : public ASTNode {
-    std::vector<ASTNode*> definitions;
-
-    explicit TranslationUnitNode() : ASTNode(Kind::NODE_TRANSLATION_UNIT) {}
-};
-
-struct FunctionDefinitionNode : public ASTNode {
-    std::string name;
-    std::vector<ASTNode*> statements;
-
-    explicit FunctionDefinitionNode(std::string name, std::vector<ASTNode*> statements) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), name(name), statements(statements) {}
-};
-
 struct ExpressionStatementNode : public ASTNode {
     ASTNode* expr;
 
@@ -113,6 +100,20 @@ struct WhileNode : public ASTNode {
     ASTNode* body;
 
     explicit WhileNode(ASTNode* condition, ASTNode* body) : ASTNode(Kind::NODE_WHILE), condition(condition), body(body){};
+};
+
+struct FunctionDefinitionNode : public ASTNode {
+    std::string fn_name;
+    std::string type_name;
+    BlockNode* body;
+
+    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name, BlockNode* body) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name), type_name(type_name), body(body) {}
+};
+
+struct TranslationUnitNode : public ASTNode {
+    std::vector<ASTNode*> definitions;
+
+    explicit TranslationUnitNode() : ASTNode(Kind::NODE_TRANSLATION_UNIT) {}
 };
 
 #endif // SHIRO_AST_HPP

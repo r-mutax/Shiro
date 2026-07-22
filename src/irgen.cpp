@@ -24,16 +24,14 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
 
     FunctionDefinitionNode* func_def = static_cast<FunctionDefinitionNode*>(node);
     IRFunction func;
-    func.name = func_def->name;
+    func.name = func_def->fn_name;
 
     instructions.clear();
     next_temp = 0;
     symid_to_temp.clear();
 
     Operand ret = Operand::IntVal(0);
-    for(auto& stmt : func_def->statements){
-        ret = gen_stmt(stmt);
-    }
+    ret = gen_expr(func_def->body);
     emit_ret(ret);
     
     func.constructCFG(instructions);

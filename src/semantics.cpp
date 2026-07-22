@@ -31,10 +31,12 @@ bool Semantics::checkNode(ASTNode* node){
             auto* fd = static_cast<FunctionDefinitionNode*>(node);
 
             scopeIn();
-            for(auto* stmt : fd->statements){
-                if(!checkNode(stmt)) return false;
-            }
+
+            // TODO: declare function
+            
+            checkNode(fd->body);
             scopeOut();
+
             return true;
         }
         case ASTNode::NODE_VARIABLE_DECLARE:{

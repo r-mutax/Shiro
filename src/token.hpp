@@ -35,11 +35,13 @@ struct Token {
         NOT_EQUAL,              // !=
         NOT,                    // !
         CHILDA,                 // ~
+        ARROW,                  // ->
         LET,                    // let
         IF,                     // if
         WHILE,                  // while
         ELSE,                   // else
         UNKNOWN,                // unknown
+        FN,                     // fn
         I8,                     // i8
         I16,                    // i16
         I32,                    // i32
@@ -107,6 +109,8 @@ struct Token {
                 return "COLON";
             case SEMICOLON:
                 return "SEMICOLON";
+            case ARROW:
+                return "ARROW";
             case EQUAL:
                 return "EQUAL";
             case EQUAL_EQUAL:
@@ -123,6 +127,8 @@ struct Token {
                 return "else";
             case WHILE:
                 return "while";
+            case FN:
+                return "fn";
             case I8:
                 return "i8";
             case I16:
@@ -147,6 +153,18 @@ struct Token {
                 return "EOF";
         }
         return "UNKNOWN";
+    }
+
+    bool isTypeCandidate(){
+        return type == Token::I8
+            || type == Token::I16
+            || type == Token::I32
+            || type == Token::I64 
+            || type == Token::U8
+            || type == Token::U16
+            || type == Token::U32
+            || type == Token::U64
+            || type == Token::IDENT;
     }
 };
 
