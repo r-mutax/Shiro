@@ -8,7 +8,7 @@
 #include <iostream>
 
 struct Symbol {
-    enum Kind { VARIABLE, TYPE } kind;
+    enum Kind { VARIABLE, FUNCTION, TYPE } kind;
     std::string name;
     int id;
     const Type* type_info = nullptr;
@@ -80,6 +80,18 @@ class Semantics {
             symbol->type_info = type_info;
         } else {
             std::cerr << "Error: Variable " << name << " is already declared" << std::endl;
+            return nullptr;
+        }
+        return symbol;
+    }
+
+    Symbol* declare_function(const std::string& name, const Type* ret_type){
+        Symbol* symbol = current_scope->declare(Symbol::FUNCTION, name);
+        if(symbol != nullptr){
+            // function need not system id
+            symbol->type_info = ret_type;
+        } else {
+            std::cerr << "Error: Function " << name << " is already declared" << std::endl;
             return nullptr;
         }
         return symbol;

@@ -13,6 +13,7 @@ struct ASTNode {
     enum Kind {
         NODE_TRANSLATION_UNIT,
         NODE_FUNCTION_DEFINITION,
+        NODE_FUNCTION_CALL,
         NODE_INTEGER,
         NODE_BLOCK,
         NODE_UNARY_OP,
@@ -85,6 +86,12 @@ struct VariableNode : public ASTNode {
     int symbol_id = -1;
 
     explicit VariableNode(std::string n) : ASTNode(Kind::NODE_VARIABLE), name(n){};
+};
+
+struct FunctionCallNode : public ASTNode {
+    std::string fn_name;
+
+    explicit FunctionCallNode(std::string fn_name) : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name){};
 };
 
 struct IfNode : public ASTNode {

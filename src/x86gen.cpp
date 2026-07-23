@@ -1,4 +1,5 @@
 #include "x86gen.hpp"
+#include "irgen.hpp"
 #include <iostream>
 
 void X86Generator::generate() {
@@ -72,41 +73,83 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction &func) {
 }
 
 std::string X86Generator::activateDst(const Operand& op, X86RegAllocState& regalloc_state){
-  if(op.kind == Operand::INT_VAL){
-    throw std::runtime_error("Destination operand cannot be integer");
-  }
 
-  if(regalloc_state.is_spill(op)){
-    return regalloc_state.SpillDstReg;
-  } else {
-    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  switch(op.kind)
+  {
+    case Operand::INT_VAL:
+      throw std::runtime_error("Destination operand cannot be integer");
+    case Operand::TEMP:
+    {
+      if(regalloc_state.is_spill(op)){
+        return regalloc_state.SpillDstReg;
+      } else {
+        return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+      }
+    }
+    case Operand::LLABEL:
+    {
+      return ".L" + std::to_string(op.label_id);
+    }
+    case Operand::FUNC:
+    {
+      throw std::runtime_error("Destination operand cannot be label or function");
+    }
   }
+  throw std::runtime_error("Invalid operand kind in activateDst");
 }
 
 std::string X86Generator::activateSrc1(const Operand& op, X86RegAllocState& regalloc_state){
-  if(op.kind == Operand::INT_VAL){
-    return std::to_string(op.imm);
-  }
 
-  if(regalloc_state.is_spill(op)){
-    regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc1Reg);
-    return regalloc_state.SpillSrc1Reg;
-  } else {
-    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  switch(op.kind)
+  {
+    case Operand::INT_VAL:
+      return std::to_string(op.imm);
+    case Operand::TEMP:
+    {
+      if(regalloc_state.is_spill(op)){
+        regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc1Reg);
+        return regalloc_state.SpillSrc1Reg;
+      } else {
+        return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+      }
+    }
+    case Operand::LLABEL:
+    {
+      return ".L" + std::to_string(op.label_id);
+    }
+    case Operand::FUNC:
+    {
+      return op.name;
+    }
   }
+  throw std::runtime_error("Invalid operand kind in activateSrc1");
 }
 
 std::string X86Generator::activateSrc2(const Operand& op, X86RegAllocState& regalloc_state){
-  if(op.kind == Operand::INT_VAL){
-    return std::to_string(op.imm);
-  }
 
-  if(regalloc_state.is_spill(op)){
-    regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc2Reg);
-    return regalloc_state.SpillSrc2Reg;
-  } else {
-    return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+  switch(op.kind)
+  {
+    case Operand::INT_VAL:
+      return std::to_string(op.imm);
+    case Operand::TEMP:
+    {
+      if(regalloc_state.is_spill(op)){
+        regalloc_state.load_from_spill(out, op, regalloc_state.SpillSrc2Reg);
+        return regalloc_state.SpillSrc2Reg;
+      } else {
+        return regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first;
+      }
+    }
+    case Operand::LLABEL:
+    {
+      return ".L" + std::to_string(op.label_id);
+    }
+    case Operand::FUNC:
+    {
+      return op.name;
+    }
   }
+  throw std::runtime_error("Invalid operand kind in activateSrc2");
 }
 
 void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_state){
@@ -228,6 +271,14 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
       out << "  mov " << dst << ", " << src1 << std::endl;
     }
 
+    deactivateDst(instr.dst, regalloc_state);
+    break;
+  }
+  case IRInstruction::Op::CALL:
+  {
+    std::string dst = activateDst(instr.dst, regalloc_state);
+    out << "  call " << instr.src1.name << std::endl;
+    out << "  mov " << dst << ", rax" << std::endl;
     deactivateDst(instr.dst, regalloc_state);
     break;
   }
@@ -525,29 +576,34 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
   case IRInstruction::Op::JZ:
   {
     std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
 
     out << "  mov rax, " << src1 << std::endl;
     out << "  test rax, rax" << std::endl;
-    out << "  jz .L" << instr.dst.label_id << std::endl;
+    out << "  jz " << src2 << std::endl;
     break;
   }
   case IRInstruction::Op::JNZ:
   {
     std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    std::string src2 = activateSrc2(instr.src2, regalloc_state);
 
     out << "  mov rax, " << src1 << std::endl;
     out << "  test rax, rax" << std::endl;
-    out << "  jnz .L" << instr.dst.label_id << std::endl;
+    out << "  jnz " << src2 << std::endl;
     break;
   }
   case IRInstruction::Op::JMP:
   {
-    out << "  jmp .L" << instr.dst.label_id << std::endl;
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+
+    out << "  jmp " << src1 << std::endl;
     break;
   }
   case IRInstruction::Op::LABEL:
   {
-    out << ".L" << instr.dst.label_id << ":" << std::endl;
+    std::string src1 = activateSrc1(instr.src1, regalloc_state);
+    out << src1 << ":" << std::endl;
     break;
   }
   default:

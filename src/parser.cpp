@@ -254,7 +254,13 @@ ASTNode* Parser::parsePrimary(){
     }
 
     if(token.type == Token::IDENT){
-        return new VariableNode(token.value);
+        if(stream.peek().type == Token::LPAREN){
+            stream.next();
+            stream.expect(Token::RPAREN);
+            return new FunctionCallNode(token.value);
+        } else {
+            return new VariableNode(token.value);
+        }
     }
 
     throw std::runtime_error("Unexpected token: " + token.to_str());

@@ -30,13 +30,43 @@ bool Semantics::checkNode(ASTNode* node){
         case ASTNode::NODE_FUNCTION_DEFINITION:{
             auto* fd = static_cast<FunctionDefinitionNode*>(node);
 
-            scopeIn();
+            const Symbol* type_sym = current_scope->find_recursive(fd->type_name);
+            if(type_sym == nullptr){
+                std::cerr << "Error: Return type " << fd->type_name << " is not declared" << std::endl;
+                return false;
+            }
+            if(type_sym->kind != Symbol::TYPE){
+                std::cerr << "Error: " << fd->type_name << " is not a type" << std::endl;
+                return false;
+            }
+            Symbol* func_sym = declare_function(fd->fn_name, type_sym->type_info);
+            if(func_sym == nullptr){
+                return false;
+            }
+            fd->evaluated_type = type_sym->type_info;
 
-            // TODO: declare function
-            
+            scopeIn();
             checkNode(fd->body);
             scopeOut();
 
+
+
+            return true;
+        }
+        case ASTNode::NODE_FUNCTION_CALL:{
+            auto* fc = static_cast<FunctionCallNode*>(node);
+            
+            const Symbol* func_sym = current_scope->find_recursive(fc->fn_name);
+            if(func_sym == nullptr){
+                std::cerr << "Error: Function " << fc->fn_name << " is not declared" << std::endl;
+                return false;
+            }
+            if(func_sym->kind != Symbol::FUNCTION){
+                std::cerr << "Error: " << fc->fn_name << " is not a function" << std::endl;
+                return false;
+            }
+
+            fc->evaluated_type = func_sym->type_info;
             return true;
         }
         case ASTNode::NODE_VARIABLE_DECLARE:{

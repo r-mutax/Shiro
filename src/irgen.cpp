@@ -105,6 +105,11 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             throw std::runtime_error("IRGen Error: variable'" + v->name + "'not found in symbol map");
         }
         return it->second;
+    } else if(node->kind == ASTNode::NODE_FUNCTION_CALL){
+        FunctionCallNode* fc = static_cast<FunctionCallNode*>(node);
+        Operand res_temp = Operand::Temp(next_temp++, fc->evaluated_type);
+        emit_call(res_temp, Operand::Func(fc->fn_name));
+        return res_temp;
     } else if(node->kind == ASTNode::NODE_IF){
         IfNode* if_node = static_cast<IfNode*>(node);
         Operand condition = gen_expr(if_node->condition);
@@ -113,15 +118,15 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         int end_label = next_label++;
         Operand res_temp = Operand::Temp(next_temp++, if_node->then_block->evaluated_type);
 
-        emit_jz(condition, Operand::Label(else_label));
+        emit_jz(condition, Operand::LLabel(else_label));
 
         // Then
         Operand then_val = gen_expr(if_node->then_block);
         emit_mov(res_temp, then_val);
-        emit_jmp(Operand::Label(end_label));
+        emit_jmp(Operand::LLabel(end_label));
 
         // else
-        emit_label(Operand::Label(else_label));
+        emit_label(Operand::LLabel(else_label));
 
         if(if_node->else_block){
             Operand else_val = gen_expr(if_node->else_block);
@@ -129,7 +134,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         } else {
             emit_mov(res_temp, Operand::IntVal(0));
         }
-        emit_label(Operand::Label(end_label));
+        emit_label(Operand::LLabel(end_label));
         return res_temp;
     } else if(node->kind == ASTNode::NODE_WHILE){
         WhileNode* while_node = static_cast<WhileNode*>(node);
@@ -137,17 +142,17 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         int end_label = next_label++;
         Operand res_temp = Operand::Temp(next_temp++, while_node->evaluated_type);
 
-        emit_label(Operand::Label(start_label));
+        emit_label(Operand::LLabel(start_label));
         Operand condition = gen_expr(while_node->condition);
-        emit_jz(condition, Operand::Label(end_label));
+        emit_jz(condition, Operand::LLabel(end_label));
 
         // Body
         Operand body_val = gen_expr(while_node->body);
         emit_mov(res_temp, body_val);
-        emit_jmp(Operand::Label(start_label));
+        emit_jmp(Operand::LLabel(start_label));
 
         // End
-        emit_label(Operand::Label(end_label));
+        emit_label(Operand::LLabel(end_label));
         return res_temp;
     } else if(node->kind == ASTNode::NODE_BLOCK){
         BlockNode* block = static_cast<BlockNode*>(node);
@@ -190,16 +195,16 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             int end_label = next_label++;
             Operand res_temp = Operand::Temp(next_temp++, bin_op->evaluated_type);
 
-            emit_jz(left, Operand::Label(false_label));
+            emit_jz(left, Operand::LLabel(false_label));
 
             Operand right = gen_expr(bin_op->right);
-            emit_jz(right, Operand::Label(false_label));
+            emit_jz(right, Operand::LLabel(false_label));
             emit_mov(res_temp, Operand::IntVal(1));
-            emit_jmp(Operand::Label(end_label));
+            emit_jmp(Operand::LLabel(end_label));
 
-            emit_label(Operand::Label(false_label));
+            emit_label(Operand::LLabel(false_label));
             emit_mov(res_temp, Operand::IntVal(0));
-            emit_label(Operand::Label(end_label));
+            emit_label(Operand::LLabel(end_label));
             return res_temp;
         } else if(bin_op->op.type == Token::OR_OR){
             Operand left = gen_expr(bin_op->left);
@@ -207,16 +212,16 @@ Operand IRGenerator::gen_expr(ASTNode* node){
             int end_label = next_label++;
             Operand res_temp = Operand::Temp(next_temp++, bin_op->evaluated_type);
 
-            emit_jnz(left, Operand::Label(true_label));
+            emit_jnz(left, Operand::LLabel(true_label));
             
             Operand right = gen_expr(bin_op->right);
-            emit_jnz(right, Operand::Label(true_label));
+            emit_jnz(right, Operand::LLabel(true_label));
             emit_mov(res_temp, Operand::IntVal(0));
-            emit_jmp(Operand::Label(end_label));
+            emit_jmp(Operand::LLabel(end_label));
 
-            emit_label(Operand::Label(true_label));
+            emit_label(Operand::LLabel(true_label));
             emit_mov(res_temp, Operand::IntVal(1));
-            emit_label(Operand::Label(end_label));
+            emit_label(Operand::LLabel(end_label));
             return res_temp;
         } else {
             Operand left = gen_expr(bin_op->left);
@@ -315,7 +320,7 @@ void IRFunction::constructCFG(const std::vector<IRInstruction>& instructions){
             is_leader = false;
             bb->start_index = i;
             if(instr.op == IRInstruction::LABEL){
-                label_to_bb[instr.dst.label_id] = bb;
+                label_to_bb[instr.src1.label_id] = bb;
             }
         }
 
@@ -338,10 +343,16 @@ void IRFunction::constructCFG(const std::vector<IRInstruction>& instructions){
 
         const auto& last_instr = bb->instructions.back();
 
-        if(last_instr.op == IRInstruction::JMP
-            || last_instr.op == IRInstruction::JZ
+        if(last_instr.op == IRInstruction::JMP){
+            int target_id = last_instr.src1.label_id;
+            auto it = label_to_bb.find(target_id);
+            if(it != label_to_bb.end()){
+                bb->succs.push_back(it->second);
+                it->second->preds.push_back(bb.get());
+            }
+        } else if(last_instr.op == IRInstruction::JZ
             || last_instr.op == IRInstruction::JNZ){
-            int target_id = last_instr.dst.label_id;
+            int target_id = last_instr.src2.label_id;
             auto it = label_to_bb.find(target_id);
             if(it != label_to_bb.end()){
                 bb->succs.push_back(it->second);

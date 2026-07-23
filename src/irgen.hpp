@@ -15,13 +15,15 @@ struct Operand {
     enum Kind {
         TEMP,
         INT_VAL,
-        LABEL,
+        FUNC,
+        LLABEL,
     } kind;
 
     int temp_id;    
     int label_id;
     int64_t imm;
     OperandType type;
+    std::string name;
 
     static OperandType to_operand_type(const Type* type){
         if(type == nullptr){
@@ -44,8 +46,12 @@ struct Operand {
         return Operand { .kind = INT_VAL, .imm = imm, .type = to_operand_type(type)};
     }
 
-    static Operand Label(int id) {
-        return Operand { .kind = LABEL, .label_id = id };
+    static Operand Func(std::string name){
+        return Operand { .kind = FUNC, .name = name };
+    }
+
+    static Operand LLabel(int id) {
+        return Operand { .kind = LLABEL, .label_id = id };
     }
 
     std::string to_str() const {
@@ -54,7 +60,9 @@ struct Operand {
                 return "T" + std::to_string(temp_id);
             case INT_VAL:
                 return std::to_string(imm);
-            case LABEL:
+            case FUNC:
+                return name;
+            case LLABEL:
                 return ".L" + std::to_string(label_id);
         }
         return "UNKNOWN";
@@ -66,7 +74,9 @@ struct Operand {
                 return "QWORD PTR [rbp - " + std::to_string((temp_id + 1) * 8) + "]";
             case INT_VAL:
                 return std::to_string(imm);
-            case LABEL:
+            case FUNC:
+                return name;
+            case LLABEL:
                 return ".L" + std::to_string(label_id);
         }
         return "UNKNOWN";
@@ -90,7 +100,8 @@ struct IRInstruction {
         BXOR,   // bit xor src1 and src2 to dst
         BNOT,   // bit not src1 to dst
         NEG,    // negate src1 to dst
-        NOT,    // logical not src1 to dst        
+        NOT,    // logical not src1 to dst
+        CALL,   // call function dst
         RET,    // return value
         EQ,     // check equal src1 and src2 to dst
         NEQ,    // check not equal src1 and src2 to dst
@@ -138,6 +149,8 @@ struct IRInstruction {
                 return "NEG " + dst.to_str() + ", " + src1.to_str();
             case NOT:
                 return "NOT " + dst.to_str() + ", " + src1.to_str();
+            case CALL:
+                return "CALL " + dst.to_str() + ", " + src1.to_str();
             case RET:
                 return "RET " + src1.to_str();
             case EQ:
@@ -285,6 +298,10 @@ class IRGenerator {
         emit(IRInstruction::NOT, dst, src);
     }
 
+    void emit_call(Operand dst, Operand src){
+        emit(IRInstruction::CALL, dst, src);
+    }
+
     void emit_ret(Operand src){
         emit(IRInstruction::RET, Operand::IntVal(0), src);
     }
@@ -298,19 +315,19 @@ class IRGenerator {
     }
 
     void emit_jz(Operand src, Operand label){
-        emit(IRInstruction::JZ, label, src);
+        emit(IRInstruction::JZ, Operand::IntVal(0), src, label);
     }
 
     void emit_jnz(Operand src, Operand label){
-        emit(IRInstruction::JNZ, label, src);
+        emit(IRInstruction::JNZ, Operand::IntVal(0), src, label);
     }
 
     void emit_jmp(Operand label){
-        emit(IRInstruction::JMP, label);
+        emit(IRInstruction::JMP, Operand::IntVal(0), label);
     }
 
     void emit_label(Operand label){
-        emit(IRInstruction::LABEL, label);
+        emit(IRInstruction::LABEL, Operand::IntVal(0), label);
     }
 
     IRFunction gen_function(ASTNode* node);

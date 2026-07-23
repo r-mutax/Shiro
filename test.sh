@@ -150,7 +150,8 @@ assert "fn main() -> i8 {let x: i16; x = 300; x;}" 44
 assert "fn main() -> i8 {let x: u64; x = 123456; x;}" 64
 assert "fn foo() -> i8 { 10; } fn main() -> i8 { 42; }" 42
 assert "fn helper() -> u32 { 100; } fn main() -> i64 { 200; }" 200
-assert "fn main() -> i8 { 5; } fn bar() -> i8 { 10; }" 5
+assert "fn main() -> i8 { bar(); } fn bar() -> i8 { 10; }" 10
+assert "fn bar() -> i8 { 10; } fn main() -> i8 { bar(); } " 10
 
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
