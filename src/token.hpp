@@ -36,6 +36,7 @@ struct Token {
         NOT,                    // !
         CHILDA,                 // ~
         ARROW,                  // ->
+        COMMA,                  // ,
         LET,                    // let
         IF,                     // if
         WHILE,                  // while
@@ -119,6 +120,8 @@ struct Token {
                 return "NOT_EQUAL";
             case CHILDA:
                 return "CHILDA";
+            case COMMA:
+                return "COMMA";
             case LET:
                 return "LET";
             case IF:

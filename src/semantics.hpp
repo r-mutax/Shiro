@@ -12,6 +12,7 @@ struct Symbol {
     std::string name;
     int id;
     const Type* type_info = nullptr;
+    std::vector<Symbol*> params;
 
     Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
 };

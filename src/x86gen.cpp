@@ -244,6 +244,17 @@ void X86Generator::gen_function(const IRFunction &func) {
   out << "  push r14\n";
   out << "  push r15\n";
 
+  for(size_t i = 0; i < func.param_temps.size(); ++i){
+    if(i < 6){
+      std::string dst = activateDst(func.param_temps[i], regalloc_state);
+      out << "  mov " << dst << ", " << argregs[i] << std::endl;
+      deactivateDst(func.param_temps[i], regalloc_state);
+    } else {
+      std::cerr << "Error: Function with more than 6 arguments not supported yet" << std::endl;
+      exit(1);
+    }
+  }
+
   for (auto &instr : func.instructions) {
     gen_instruction(instr, regalloc_state);
   }
@@ -276,8 +287,18 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
   }
   case IRInstruction::Op::CALL:
   {
-    std::string dst = activateDst(instr.dst, regalloc_state);
+    for(size_t i = 0; i < instr.args.size(); ++i){
+      if(i < 6){
+        std::string reg = activateSrc1(instr.args[i], regalloc_state);
+        out << "  mov " << argregs[i] << ", " << reg << std::endl;
+      } else {
+        std::cerr << "Error: Function with more than 6 arguments not supported yet" << std::endl;
+        exit(1);
+      }
+    }
     out << "  call " << instr.src1.name << std::endl;
+
+    std::string dst = activateDst(instr.dst, regalloc_state);
     out << "  mov " << dst << ", rax" << std::endl;
     deactivateDst(instr.dst, regalloc_state);
     break;

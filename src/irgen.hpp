@@ -115,6 +115,8 @@ struct IRInstruction {
     Operand src1;
     Operand src2;
 
+    std::vector<Operand> args;
+
     std::string to_str() const {
         switch(op) {
             case MOV:
@@ -204,6 +206,7 @@ class IRFunction {
 
 public:
     std::string name;
+    std::vector<Operand> param_temps;
     std::vector<std::unique_ptr<BasicBlock>> blocks;
 
     void constructCFG(const std::vector<IRInstruction>& instructions);
@@ -298,8 +301,10 @@ class IRGenerator {
         emit(IRInstruction::NOT, dst, src);
     }
 
-    void emit_call(Operand dst, Operand src){
-        emit(IRInstruction::CALL, dst, src);
+    void emit_call(Operand dst, Operand src, std::vector<Operand>& args){
+        IRInstruction instr{.op = IRInstruction::CALL, .dst = dst, .src1 = src, .src2 = Operand::IntVal(0)};
+        instr.args = args;
+        instructions.push_back(instr);
     }
 
     void emit_ret(Operand src){

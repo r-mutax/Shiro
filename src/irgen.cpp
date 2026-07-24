@@ -1,4 +1,5 @@
 #include "irgen.hpp"
+#include "AST.hpp"
 #include <iostream>
 
 bool IRGenerator::generate(ASTNode* ast) {
@@ -29,6 +30,13 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     instructions.clear();
     next_temp = 0;
     symid_to_temp.clear();
+
+    for(auto* param : func_def->params){
+        auto* vd = static_cast<VariableDeclareNode*>(param);
+        Operand param_op = Operand::Temp(next_temp++, vd->evaluated_type);
+        symid_to_temp[vd->symbol_id] = param_op;
+        func.param_temps.push_back(param_op);
+    }
 
     Operand ret = Operand::IntVal(0);
     ret = gen_expr(func_def->body);
@@ -107,8 +115,14 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         return it->second;
     } else if(node->kind == ASTNode::NODE_FUNCTION_CALL){
         FunctionCallNode* fc = static_cast<FunctionCallNode*>(node);
+
+        std::vector<Operand> args;
+        for(auto* arg_node : fc->args){
+            args.push_back(gen_expr(arg_node));
+        }
+
         Operand res_temp = Operand::Temp(next_temp++, fc->evaluated_type);
-        emit_call(res_temp, Operand::Func(fc->fn_name));
+        emit_call(res_temp, Operand::Func(fc->fn_name), args);
         return res_temp;
     } else if(node->kind == ASTNode::NODE_IF){
         IfNode* if_node = static_cast<IfNode*>(node);

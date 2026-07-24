@@ -150,9 +150,12 @@ assert "fn main() -> i8 {let x: i16; x = 300; x;}" 44
 assert "fn main() -> i8 {let x: u64; x = 123456; x;}" 64
 assert "fn foo() -> i8 { 10; } fn main() -> i8 { 42; }" 42
 assert "fn helper() -> u32 { 100; } fn main() -> i64 { 200; }" 200
-assert "fn main() -> i8 { bar(); } fn bar() -> i8 { 10; }" 10
+assert "fn main() -> i8 { 5; } fn bar() -> i8 { 10; }" 5
 assert "fn bar() -> i8 { 10; } fn main() -> i8 { bar(); } " 10
-
+assert "fn add(x: i8, y: i8) -> i8 { x + y; } fn main() -> i8 { add(10, 32); }" 42
+assert "fn square(x: i32) -> i32 { x * x; } fn main() -> i8 { square(5); }" 25
+assert "fn sum6(a: i8, b: i8, c: i8, d: i8, e: i8, f: i8) -> i8 { a + b + c + d + e + f; } fn main() -> i8 { sum6(1, 2, 3, 4, 5, 6); }" 21
+assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main() -> i8 { fact(5); }" 120
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

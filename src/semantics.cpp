@@ -46,7 +46,25 @@ bool Semantics::checkNode(ASTNode* node){
             fd->evaluated_type = type_sym->type_info;
 
             scopeIn();
-            checkNode(fd->body);
+
+            for(auto& it : fd->params){
+                if(!checkNode(it)) return false;
+
+                auto* vd = static_cast<VariableDeclareNode*>(it);
+                const Symbol* param_sym = current_scope->find_recursive(vd->name);
+                if(param_sym == nullptr){
+                    std::cerr << "Error: Param " << vd->name << " is not declared" << std::endl;
+                    return false;
+                }
+                if(param_sym->kind != Symbol::VARIABLE){
+                    std::cerr << "Error: " << vd->name << " is not a variable" << std::endl;
+                    return false;
+                }
+
+                func_sym->params.push_back(const_cast<Symbol*>(param_sym));
+            }
+
+            if(!checkNode(fd->body)){return false;}
             scopeOut();
 
 
@@ -65,6 +83,26 @@ bool Semantics::checkNode(ASTNode* node){
                 std::cerr << "Error: " << fc->fn_name << " is not a function" << std::endl;
                 return false;
             }
+
+            if(fc->args.size() != func_sym->params.size()){
+                std::cerr << "Error: Function " << fc->fn_name << " expects " << func_sym->params.size() << " arguments, but got " << fc->args.size() << std::endl;
+                return false;
+            }
+
+            for(size_t i = 0; i < fc->args.size(); i++){
+                auto* arg = fc->args[i];
+                if(!checkNode(arg)) return false;
+
+                if(arg->kind == ASTNode::NODE_INTEGER){
+                    arg->evaluated_type = func_sym->params[i]->type_info;
+                }
+
+                if(arg->evaluated_type != func_sym->params[i]->type_info){
+                    std::cerr << "Error: Argument " << i << " of function " << fc->fn_name << " has wrong type" << std::endl;
+                    return false;
+                }
+            }
+            
 
             fc->evaluated_type = func_sym->type_info;
             return true;

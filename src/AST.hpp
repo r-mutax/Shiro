@@ -90,8 +90,9 @@ struct VariableNode : public ASTNode {
 
 struct FunctionCallNode : public ASTNode {
     std::string fn_name;
+    std::vector<ASTNode*> args;
 
-    explicit FunctionCallNode(std::string fn_name) : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name){};
+    explicit FunctionCallNode(std::string fn_name, std::vector<ASTNode*> args) : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name), args(args){};
 };
 
 struct IfNode : public ASTNode {
@@ -112,9 +113,10 @@ struct WhileNode : public ASTNode {
 struct FunctionDefinitionNode : public ASTNode {
     std::string fn_name;
     std::string type_name;
+    std::vector<ASTNode*> params;
     BlockNode* body;
 
-    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name, BlockNode* body) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name), type_name(type_name), body(body) {}
+    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name, std::vector<ASTNode*> params ,BlockNode* body) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name), type_name(type_name), params(params), body(body) {}
 };
 
 struct TranslationUnitNode : public ASTNode {

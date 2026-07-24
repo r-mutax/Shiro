@@ -32,7 +32,24 @@ ASTNode* Parser::parseFunctionDefinition(){
     }
 
     stream.expect(Token::LPAREN);
-    stream.expect(Token::RPAREN);
+    std::vector<ASTNode*> params;
+    while(!stream.consume(Token::RPAREN)){
+        if(!params.empty()){
+            stream.expect(Token::COMMA);
+        }
+
+        Token token = stream.next();
+        if(token.type != Token::IDENT){
+            throw std::runtime_error("Expected IDENT after fn: " + token.to_str());
+        }
+
+        std::string type_name = "unknown";
+        if(stream.consume(Token::COLON)){
+            Token type_tok = stream.next();
+            type_name = type_tok.value;
+        }
+        params.push_back(new VariableDeclareNode(token.value, type_name));
+    }
 
     stream.expect(Token::ARROW);
 
@@ -46,7 +63,7 @@ ASTNode* Parser::parseFunctionDefinition(){
     stream.expect(Token::LBRACE);
     ASTNode* block = parseBlock();
     
-    return new FunctionDefinitionNode(token.value, type_name, static_cast<BlockNode*>(block));
+    return new FunctionDefinitionNode(token.value, type_name, params, static_cast<BlockNode*>(block));
 }
 
 ASTNode* Parser::parseStatement(){
@@ -256,8 +273,13 @@ ASTNode* Parser::parsePrimary(){
     if(token.type == Token::IDENT){
         if(stream.peek().type == Token::LPAREN){
             stream.next();
+            std::vector<ASTNode*> args;
+            while(stream.peek().type != Token::RPAREN){
+                if (!args.empty()) stream.expect(Token::COMMA);
+                args.push_back(parseExpression());
+            }
             stream.expect(Token::RPAREN);
-            return new FunctionCallNode(token.value);
+            return new FunctionCallNode(token.value, args);
         } else {
             return new VariableNode(token.value);
         }

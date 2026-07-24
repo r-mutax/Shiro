@@ -152,6 +152,7 @@ struct X86RegAllocState{
 class X86Generator{
     const IRProgram& program;
     std::ostream& out;
+    const std::vector<std::string> argregs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
     X86RegAllocState alloc_registers(const IRFunction& func);
     std::string activateDst(const Operand& op, X86RegAllocState& regalloc_state);
