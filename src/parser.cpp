@@ -67,12 +67,15 @@ ASTNode* Parser::parseFunctionDefinition(){
 }
 
 ASTNode* Parser::parseStatement(){
-    
-    if(stream.peek().type == Token::LET){
-        return parseVariableDeclare();
-    }
 
-    return parseExpressionStatement();
+    switch(stream.peek().type){
+        case Token::LET:
+            return parseVariableDeclare();
+        case Token::RETURN:
+            return parseReturnStatement();
+        default:
+            return parseExpressionStatement();
+    }
 }
 
 ASTNode* Parser::parseVariableDeclare(){
@@ -91,6 +94,13 @@ ASTNode* Parser::parseVariableDeclare(){
     stream.expect(Token::SEMICOLON);
     
     return new VariableDeclareNode(token.value, type_name);
+}
+
+ASTNode* Parser::parseReturnStatement(){
+    stream.expect(Token::RETURN);
+    ASTNode* expr = parseExpression();
+    stream.expect(Token::SEMICOLON);
+    return new ReturnNode(expr);
 }
 
 ASTNode* Parser::parseExpressionStatement(){

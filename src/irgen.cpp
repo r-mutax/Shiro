@@ -39,8 +39,16 @@ IRFunction IRGenerator::gen_function(ASTNode* node){
     }
 
     Operand ret = Operand::IntVal(0);
+
+    Operand end_label = Operand::LLabel(next_label++);
+    func.end_label = end_label;
+    current_end_label.push_back(end_label);
     ret = gen_expr(func_def->body);
+    current_end_label.pop_back();
+
     emit_ret(ret);
+
+    emit_label(end_label);
     
     func.constructCFG(instructions);
     func.analyzeLiveness();
@@ -97,6 +105,12 @@ Operand IRGenerator::gen_stmt(ASTNode* node){
         symid_to_temp[vd->symbol_id] = temp_val;
         emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
         return temp_val;
+    } else if(node->kind == ASTNode::NODE_RETURN){
+        ReturnNode* ret_node = static_cast<ReturnNode*>(node);
+        Operand ret_val = gen_expr(ret_node->expr);
+        emit_ret(ret_val);
+        emit_jmp(current_end_label.back());
+        return ret_val;
     } else {
         throw std::runtime_error("Unexpected statement");
     }

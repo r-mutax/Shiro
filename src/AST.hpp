@@ -24,6 +24,7 @@ struct ASTNode {
         NODE_ASSIGNMENT,
         NODE_IF,
         NODE_WHILE,
+        NODE_RETURN,
     };
 
     Kind kind;
@@ -108,6 +109,12 @@ struct WhileNode : public ASTNode {
     ASTNode* body;
 
     explicit WhileNode(ASTNode* condition, ASTNode* body) : ASTNode(Kind::NODE_WHILE), condition(condition), body(body){};
+};
+
+struct ReturnNode : public ASTNode {
+    ASTNode* expr;
+
+    explicit ReturnNode(ASTNode* expr) : ASTNode(Kind::NODE_RETURN), expr(expr){};
 };
 
 struct FunctionDefinitionNode : public ASTNode {

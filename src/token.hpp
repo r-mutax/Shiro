@@ -41,6 +41,7 @@ struct Token {
         IF,                     // if
         WHILE,                  // while
         ELSE,                   // else
+        RETURN,                 // return
         UNKNOWN,                // unknown
         FN,                     // fn
         I8,                     // i8
@@ -130,6 +131,8 @@ struct Token {
                 return "else";
             case WHILE:
                 return "while";
+            case RETURN:
+                return "return";
             case FN:
                 return "fn";
             case I8:

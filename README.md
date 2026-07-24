@@ -2,7 +2,7 @@
 
 [日本語版はこちら (README.ja.md)](./README.ja.md)
 
-Shiro is a procedural programming language featuring a primitive integer type system, type inference, control flow expressions, and function definitions with parameters.
+Shiro is a procedural programming language featuring a primitive integer type system, type inference, control flow expressions, explicit return statements, and function definitions with parameters.
 
 ## 1. Specifications
 *   **Data Types**:
@@ -13,6 +13,7 @@ Shiro is a procedural programming language featuring a primitive integer type sy
 *   **Functions & Entry Point**:
     *   Functions are defined using `fn name(param: Type, ...) -> Type { ... }`.
     *   Functions support up to 6 parameters.
+    *   Functions support explicit early returns via `return expr;`.
     *   Program execution begins at the `fn main() -> Type` function definition.
 *   **Program Exit Value**: The return value of the `main` function becomes the exit code of the executable.
 
@@ -26,7 +27,8 @@ FunctionDefinition ::= "fn" Identifier "(" [ ParameterList ] ")" "->" Type Block
 ParameterList      ::= Parameter ( "," Parameter )*
 Parameter          ::= Identifier [ ":" Type ]
 
-Statement          ::= ExpressionStatement | VariableDeclareStatement
+Statement          ::= ExpressionStatement | VariableDeclareStatement | ReturnStatement
+ReturnStatement    ::= "return" Expression ";"
 
 ExpressionStatement        ::= Expression ";"
                              | Block [ ";" ]
@@ -95,6 +97,8 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Functions are defined at top-level. Parameter types and return types are strictly validated during semantic analysis.
 *   **Function Calls**: `<function_name>(<arg1>, <arg2>, ...)`
     *   Calls an existing function, passing arguments matching the function signature.
+*   **Return Statements**: `return <expression>;`
+    *   Exits early from the enclosing function at any point, returning the evaluated `<expression>`.
 *   **Explicit Type Declaration**: `let <variable_name>: <type>;`
     *   Declares a variable with an explicit primitive integer type (e.g., `let x: i32;`).
 *   **Type Inferred Declaration**: `let <variable_name>;`
@@ -123,6 +127,34 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 
 ## 5. Code Examples
 
+### Explicit Return Statement and Conditionals
+```rust
+fn max(a: i32, b: i32) -> i32 {
+    if (a > b) {
+        return a;    // Returns a immediately
+    }
+    return b;        // Returns b
+}
+
+fn main() -> i8 {
+    max(10, 20);     // Evaluates to 20
+}
+```
+
+### Recursive Function with Return
+```rust
+fn fact(n: i64) -> i64 {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * fact(n - 1);
+}
+
+fn main() -> i8 {
+    fact(5);         // Computes 5! = 120
+}
+```
+
 ### Function Parameters and Calls
 ```rust
 fn add(x: i8, y: i8) -> i8 {
@@ -130,18 +162,7 @@ fn add(x: i8, y: i8) -> i8 {
 }
 
 fn main() -> i8 {
-    add(10, 32);   // Calls add(10, 32), evaluates to 42
-}
-```
-
-### Recursive Function
-```rust
-fn fact(n: i64) -> i64 {
-    if (n <= 1) 1 else n * fact(n - 1);
-}
-
-fn main() -> i8 {
-    fact(5);       // Computes 5! = 120
+    add(10, 32);     // Calls add(10, 32), evaluates to 42
 }
 ```
 
@@ -150,16 +171,16 @@ fn main() -> i8 {
 fn main() -> i32 {
     let x: i32;
     x = 10;
-    x + 5;         // Evaluates to 15
+    x + 5;           // Evaluates to 15
 }
 ```
 
 ### Type Inference
 ```rust
 fn main() -> i64 {
-    let x;         // Type is initially unknown
-    x = 42;        // Inferred as i64 on first assignment!
-    x;             // Evaluates to 42
+    let x;           // Type is initially unknown
+    x = 42;          // Inferred as i64 on first assignment!
+    x;               // Evaluates to 42
 }
 ```
 
@@ -171,8 +192,8 @@ fn main() -> u8 {
     let y: u8;
     y = 100;
     let z: u8;
-    z = x + y;     // 200 + 100 = 300 -> Wraps around to 44 in u8!
-    z;             // Evaluates to 44
+    z = x + y;       // 200 + 100 = 300 -> Wraps around to 44 in u8!
+    z;               // Evaluates to 44
 }
 ```
 
@@ -185,7 +206,7 @@ fn main() -> i32 {
         x * 2;
     } else {
         0;
-    }              // Semicolon is omitted. Evaluates to 20
+    }                // Semicolon is omitted. Evaluates to 20
 }
 ```
 
@@ -197,22 +218,22 @@ fn main() -> i64 {
     {
         let y: i64;
         y = 10;
-        x + y;     // The block evaluates to 15
-    }              // Variable y is destroyed here
+        x + y;       // The block evaluates to 15
+    }                // Variable y is destroyed here
 }
 ```
 
 ### while Loops with Type Inference
 ```rust
 fn main() -> i64 {
-    let x;         // Inferred as i64
-    let sum;       // Inferred as i64
+    let x;           // Inferred as i64
+    let sum;         // Inferred as i64
     x = 1;
     sum = 0;
     while (x <= 5) {
         sum = sum + x;
         x = x + 1;
-    }              // Computes the sum from 1 to 5
-    sum;           // Evaluates to 15
+    }                // Computes the sum from 1 to 5
+    sum;             // Evaluates to 15
 }
 ```

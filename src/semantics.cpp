@@ -44,6 +44,7 @@ bool Semantics::checkNode(ASTNode* node){
                 return false;
             }
             fd->evaluated_type = type_sym->type_info;
+            current_func_return_types.push_back(fd->evaluated_type);
 
             scopeIn();
 
@@ -64,11 +65,11 @@ bool Semantics::checkNode(ASTNode* node){
                 func_sym->params.push_back(const_cast<Symbol*>(param_sym));
             }
 
-            if(!checkNode(fd->body)){return false;}
+            bool body_ok = checkNode(fd->body);
             scopeOut();
+            current_func_return_types.pop_back();
 
-
-
+            if(!body_ok) return false;
             return true;
         }
         case ASTNode::NODE_FUNCTION_CALL:{
@@ -144,6 +145,30 @@ bool Semantics::checkNode(ASTNode* node){
 
             vd->symbol_id = sym->id;
             vd->evaluated_type = sym->type_info;
+            return true;
+        }
+        case ASTNode::NODE_RETURN:
+        {
+            auto* rs = static_cast<ReturnNode*>(node);
+
+            if(current_func_return_types.empty()){
+                std::cerr << "Error: Return statement is not in a function" << std::endl;
+                return false;
+            }
+
+            const Type* return_type = current_func_return_types.back();
+            if(!checkNode(rs->expr)) return false;
+
+            if(rs->expr->kind == ASTNode::NODE_INTEGER){
+                rs->expr->evaluated_type = return_type;
+            }
+
+            if(return_type != rs->expr->evaluated_type){
+                std::cerr << "Error: Return type" << return_type->name << " does not match expression type " << rs->expr->evaluated_type->name << std::endl;
+                return false;
+            }
+
+            rs->evaluated_type = return_type;
             return true;
         }
         case ASTNode::NODE_INTEGER:{
@@ -233,6 +258,13 @@ bool Semantics::checkNode(ASTNode* node){
             if(!checkNode(if_node->then_block)) return false;
             if(if_node->else_block){
                 if(!checkNode(if_node->else_block)) return false;
+
+                if(if_node->then_block->kind == ASTNode::NODE_INTEGER){
+                    if_node->then_block->evaluated_type = if_node->else_block->evaluated_type;
+                }
+                if(if_node->else_block->kind == ASTNode::NODE_INTEGER){
+                    if_node->else_block->evaluated_type = if_node->then_block->evaluated_type;
+                }
 
                 if(if_node->then_block->evaluated_type
                     != if_node->else_block->evaluated_type){

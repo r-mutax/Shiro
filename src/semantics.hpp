@@ -56,6 +56,8 @@ class Semantics {
     Scope* current_scope = nullptr;
     int symbol_id = 0;
 
+    std::vector<const Type*> current_func_return_types;
+
     std::vector<std::unique_ptr<Type>> allocated_types;
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
 

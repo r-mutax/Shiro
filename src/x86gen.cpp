@@ -260,7 +260,6 @@ void X86Generator::gen_function(const IRFunction &func) {
   }
 
   // epilogue
-  out << ".L." << func.name << ".return:\n";
   out << "  pop r15\n";
   out << "  pop r14\n";
   out << "  pop r13\n";

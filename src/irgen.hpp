@@ -208,6 +208,7 @@ public:
     std::string name;
     std::vector<Operand> param_temps;
     std::vector<std::unique_ptr<BasicBlock>> blocks;
+    Operand end_label;
 
     void constructCFG(const std::vector<IRInstruction>& instructions);
     void analyzeLiveness();
@@ -229,6 +230,8 @@ class IRGenerator {
     int next_label = 0;
     std::vector<IRInstruction> instructions;
     std::unordered_map<int, Operand> symid_to_temp;
+    
+    std::vector<Operand> current_end_label;
 
     void emit(IRInstruction::Op op,
                 Operand dst = Operand::IntVal(0),

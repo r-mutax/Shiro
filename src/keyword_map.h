@@ -20,4 +20,5 @@ static KEYWORD_MAP keyword_map[] = {
     {   "u64",      Token::U64      },
     {   "unknown",  Token::UNKNOWN  },
     {   "fn",       Token::FN       },
+    {   "return",   Token::RETURN   },
 };
