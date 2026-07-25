@@ -11,8 +11,30 @@ TokenStream Lexer::lex_src(std::string_view src) {
 
   size_t len = src.size();
 
+  size_t line = 1;
+  size_t col = 1 ;
+  size_t start_col = 1;
+
+  auto create_token = [&](Token::Type type, size_t offset, std::string_view value){
+    stream.tokens.push_back({type, std::string(value), offset, value.size(), {line, start_col}});
+    col += value.size();
+  };
+
   for (size_t i = 0; i < len; ++i) {
     char c = src[i];
+
+    if(c == '\n'){
+      line++;
+      col = 1;
+      continue;
+    }
+
+    if(std::isspace(c)){
+      col++;
+      continue;
+    }
+
+    start_col = col;
 
     switch (c) {
     case '0' ... '9': {
@@ -20,129 +42,130 @@ TokenStream Lexer::lex_src(std::string_view src) {
       while (j < len && std::isdigit(src[j])) {
         j++;
       }
-      stream.tokens.push_back(
-          {Token::NUMBER, std::string(src.substr(i, j - i)), i, j - i});
+      create_token(Token::NUMBER, i, src.substr(i, j - i));
       i = j - 1;
       break;
     }
     case '+': {
-      stream.tokens.push_back({Token::PLUS, "+", i, 1});
+      create_token(Token::PLUS, i, "+");
       break;
     }
     case '-': {
       if(i + 1 < len && src[i + 1] == '>'){
-        stream.tokens.push_back({Token::ARROW, "->", i, 2});
+        create_token(Token::ARROW, i, "->");
         i++;
       } else {
-        stream.tokens.push_back({Token::MINUS, "-", i, 1});
+        create_token(Token::MINUS, i, "-");
       }
       break;
     }
     case '*': {
-      stream.tokens.push_back({Token::ASTERISK, "*", i, 1});
+      create_token(Token::ASTERISK, i, "*");
       break;
     }
     case '/': {
-      stream.tokens.push_back({Token::SLASH, "/", i, 1});
+      create_token(Token::SLASH, i, "/");
       break;
     }
     case '%': {
-      stream.tokens.push_back({Token::MOD, "%", i, 1});
+      create_token(Token::MOD, i, "%");
       break;
     }
     case '(': {
-      stream.tokens.push_back({Token::LPAREN, "(", i, 1});
+      create_token(Token::LPAREN, i, "(");
       break;
     }
     case ')': {
-      stream.tokens.push_back({Token::RPAREN, ")", i, 1});
+      create_token(Token::RPAREN, i, ")");
       break;
     }
     case '{': {
-      stream.tokens.push_back({Token::LBRACE, "{", i, 1});
+      create_token(Token::LBRACE, i, "{");
       break;
     }
     case '}': {
-      stream.tokens.push_back({Token::RBRACE, "}", i, 1});
+      create_token(Token::RBRACE, i, "}");
       break;
     }
     case '<': {
       if (i + 1 < len && src[i + 1] == '<') {
-        stream.tokens.push_back({Token::LSHIFT, "<<", i, 2});
+        create_token(Token::LSHIFT, i, "<<");
         i++;
       } else if (i + 1 < len && src[i + 1] == '=') {
-        stream.tokens.push_back({Token::LE, "<=", i, 2});
+        create_token(Token::LE, i, "<=");
         i++;
       } else {
-        stream.tokens.push_back({Token::LT, "<", i, 1});
+        create_token(Token::LT, i, "<");
       }
       break;
     }
     case '>': {
       if (i + 1 < len && src[i + 1] == '>') {
-        stream.tokens.push_back({Token::RSHIFT, ">>", i, 2});
+        create_token(Token::RSHIFT, i, ">>");
         i++;
       } else if (i + 1 < len && src[i + 1] == '=') {
-        stream.tokens.push_back({Token::GE, ">=", i, 2});
+        create_token(Token::GE, i, ">=");
         i++;
       } else {
-        stream.tokens.push_back({Token::GT, ">", i, 1});
+        create_token(Token::GT, i, ">");
       }
       break;
     }
     case '=': {
       if(i + 1 < len && src[i + 1] == '='){
-        stream.tokens.push_back({Token::EQUAL_EQUAL, "==", i, 2});
+        create_token(Token::EQUAL_EQUAL, i, "==");
         i++;
       }else{
-        stream.tokens.push_back({Token::EQUAL, "=", i, 1});
+        create_token(Token::EQUAL, i, "=");
       }
       break;
     }
     case '&': {
       if(i + 1 < len && src[i + 1] == '&'){
-        stream.tokens.push_back({Token::AND_AND, "&&", i, 2});
+        create_token(Token::AND_AND, i, "&&");
         i++;
       }else{
-        stream.tokens.push_back({Token::AND, "&", i, 1});
+        create_token(Token::AND, i, "&");
       }
       break;
     }
     case '|': {
       if(i + 1 < len && src[i + 1] == '|'){
-        stream.tokens.push_back({Token::OR_OR, "||", i, 2});
+        create_token(Token::OR_OR, i, "||");
         i++;
       }else{
-        stream.tokens.push_back({Token::OR, "|", i, 1});
+        create_token(Token::OR, i, "|");
       }
       break;
     }
     case '^': {
-      stream.tokens.push_back({Token::HAT, "^", i, 1});
+      create_token(Token::HAT, i, "^");
       break;
     }
     case ',': {
-      stream.tokens.push_back({Token::COMMA, ",", i, 1});
+      create_token(Token::COMMA, i, ",");
       break;
     }
     case '!': {
       if(i + 1 < len && src[i + 1] == '='){
-        stream.tokens.push_back({Token::NOT_EQUAL, "!=", i, 2});
+        create_token(Token::NOT_EQUAL, i, "!=");
         i++;
       }else{
-        stream.tokens.push_back({Token::NOT, "!", i, 1});
+        create_token(Token::NOT, i, "!");
       }
       break;
     }
     case '~': {
-      stream.tokens.push_back({Token::CHILDA, "~", i, 1});
+      create_token(Token::CHILDA, i, "~");
       break;  
     }
     case ':': {
-      stream.tokens.push_back({Token::COLON, ":", i, 1}); break;
+      create_token(Token::COLON, i, ":");
+      break;
     }
     case ';': {
-      stream.tokens.push_back({Token::SEMICOLON, ";", i, 1}); break;
+      create_token(Token::SEMICOLON, i, ";");
+      break;
     }
     case ' ':
     case '\t':
@@ -156,7 +179,7 @@ TokenStream Lexer::lex_src(std::string_view src) {
           i++;
         }
         std::string_view ident = src.substr(s, i - s);
-        stream.tokens.push_back({check_keyword(ident), std::string(ident), s, i - s });
+        create_token(check_keyword(ident), i, ident);
         i--;  
         break;
       }
@@ -166,7 +189,7 @@ TokenStream Lexer::lex_src(std::string_view src) {
     }
   }
 
-  stream.tokens.push_back({Token::EOF_TOK, "", len, 0});
+  create_token(Token::EOF_TOK, len, "");
 
   return stream;
 }

@@ -29,6 +29,7 @@ struct ASTNode {
 
     Kind kind;
     const Type* evaluated_type = nullptr;
+    SourceLoc loc;
 
     explicit ASTNode(Kind kind) : kind(kind) {}
 };

@@ -6,7 +6,6 @@
 #include "semantics.hpp"
 #include "irgen.hpp"
 #include "x86gen.hpp"
-
 Compiler::Compiler() {
 }
 

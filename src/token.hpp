@@ -5,6 +5,11 @@
 #include <vector>
 #include <stdexcept>
 
+struct SourceLoc{
+    size_t line = 1;
+    size_t col = 1;
+};
+
 struct Token {
     enum Type {
         NUMBER,                 // 0-9
@@ -60,6 +65,7 @@ struct Token {
     std::string value;
     size_t offset = 0;
     size_t length = 0;
+    SourceLoc loc;
 
     std::string to_str() const {
         switch(type) {
