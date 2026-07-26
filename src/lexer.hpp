@@ -3,13 +3,16 @@
 
 #include <string_view>
 #include "token.hpp"
+#include "error_reporter.hpp"
 
 class Lexer {
 public:
-    Lexer();
-    ~Lexer();
+
+    Lexer(ErrorReporter& reporter) : reporter(reporter) {}
+    ~Lexer() {}
 
     TokenStream lex_src(std::string_view src);
+    ErrorReporter& reporter;
 
 private:
     bool is_ident1(char c);

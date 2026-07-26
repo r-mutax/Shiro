@@ -19,51 +19,52 @@ ASTNode *Parser::parseDefinition() {
   }
 
   // cannnot find fn error
-  throw std::runtime_error("Expected function definition.");
+  error(stream.peek().loc, "Expected function definition.");
 }
 
 ASTNode *Parser::parseFunctionDefinition() {
-  stream.expect(Token::FN);
+  expect(Token::FN, "Expected fn keyword for function definition.");
   Token fname = stream.next();
   if (fname.type != Token::IDENT) {
-    throw std::runtime_error("Expected IDENT after fn: " + fname.to_str());
+    error(fname.loc, "Expected IDENT after fn, but got " + fname.value);
   }
 
-  stream.expect(Token::LPAREN);
+  expect(Token::LPAREN, "Expected '(' after function name.");
   std::vector<ASTNode *> params;
   while (!stream.consume(Token::RPAREN)) {
     if (!params.empty()) {
-      stream.expect(Token::COMMA);
+      expect(Token::COMMA, "Expected ',' before next parameter.");
     }
 
     Token token = stream.next();
     if (token.type != Token::IDENT) {
-      throw std::runtime_error("Expected IDENT after fn: " + token.to_str());
+      error(token.loc, "Expected IDENT for function parameter " + token.value);
     }
 
     std::string type_name = "unknown";
+    Token type_tok;
     if (stream.consume(Token::COLON)) {
-      Token type_tok = stream.next();
+      type_tok = stream.next();
       type_name = type_tok.value;
     }
-    auto vd = new VariableDeclareNode(token.value, type_name);
+    auto vd = new VariableDeclareNode(token.value, type_tok.loc, type_name);
     vd->loc = token.loc;
     params.push_back(vd);
   }
 
-  stream.expect(Token::ARROW);
+  expect(Token::ARROW, "Expected '->' after function parameters.");
 
-  // 次のトークンが型名の候補（予約語 or IDENT）かチェックする
+  // check token is type name candidate (keyword or IDENT)
   Token ty_tok = stream.next();
   if (!ty_tok.isTypeCandidate()) {
-    throw std::runtime_error("Expected type after ->: " + ty_tok.to_str());
+    error(ty_tok.loc, "Expected type after ->, but got " + ty_tok.value);
   }
   std::string type_name = ty_tok.value;
 
   ASTNode *block = parseBlock();
 
   auto fn = new FunctionDefinitionNode(fname.value, type_name, params,
-                                       static_cast<BlockNode *>(block));
+                                       static_cast<BlockNode *>(block), ty_tok.loc);
   fn->loc = fname.loc;
   return fn;
 }
@@ -81,21 +82,23 @@ ASTNode *Parser::parseStatement() {
 }
 
 ASTNode *Parser::parseVariableDeclare() {
-  stream.expect(Token::LET);
+  stream.next();
+  
   Token vname = stream.next();
   if (vname.type != Token::IDENT) {
-    throw std::runtime_error("Expected IDENT after LET: " + vname.to_str());
+    error(vname.loc, "Expected IDENT after let, but got " + vname.value);
   }
 
   std::string type_name = "unknown";
+  Token type_tok;
   if (stream.consume(Token::COLON)) {
-    Token type_tok = stream.next();
+    type_tok = stream.next();
     type_name = type_tok.value;
   }
 
-  stream.expect(Token::SEMICOLON);
+  expect(Token::SEMICOLON, "Expected ';' after variable declare.");
 
-  auto vd = new VariableDeclareNode(vname.value, type_name);
+  auto vd = new VariableDeclareNode(vname.value, type_tok.loc, type_name);
   vd->loc = vname.loc;
   return vd;
 }
@@ -103,7 +106,7 @@ ASTNode *Parser::parseVariableDeclare() {
 ASTNode *Parser::parseReturnStatement() {
   Token rettok = stream.next();
   ASTNode *expr = parseExpression();
-  stream.expect(Token::SEMICOLON);
+  expect(Token::SEMICOLON, "Expected ';' after return statement.");
 
   auto ret = new ReturnNode(expr);
   ret->loc = rettok.loc;
@@ -115,7 +118,7 @@ ASTNode *Parser::parseExpressionStatement() {
 
   if (expr->kind != ASTNode::NODE_BLOCK && expr->kind != ASTNode::NODE_IF &&
       expr->kind != ASTNode::NODE_WHILE) {
-    stream.expect(Token::SEMICOLON);
+    expect(Token::SEMICOLON, "Expected ';' after expression.");
   } else {
     stream.consume(Token::SEMICOLON);
   }
@@ -298,10 +301,10 @@ ASTNode *Parser::parsePrimary() {
     case Token::LPAREN: {
         stream.next();
         auto *node = parseExpression();
-        if (stream.next().type != Token::RPAREN) {
-        throw std::runtime_error("Expected ')' after expression: " +
-                                stream.peek().to_str());
+        if (stream.peek().type != Token::RPAREN) {
+          error(stream.peek().loc, "Expected ')' after expression: " + stream.peek().value);
         }
+        stream.next();
         node->loc = token.loc;
         return node;
     }
@@ -314,10 +317,12 @@ ASTNode *Parser::parsePrimary() {
         stream.next();
         std::vector<ASTNode *> args;
         while (stream.peek().type != Token::RPAREN) {
-            if (!args.empty()) stream.expect(Token::COMMA);
+            if (!args.empty()) {
+              expect(Token::COMMA, "Expected ',' before next argument.");
+            }
             args.push_back(parseExpression());
         }
-        stream.expect(Token::RPAREN);
+        expect(Token::RPAREN, "Expected ')' after function call.");
         auto fncall = new FunctionCallNode(token.value, args);
         fncall->loc = token.loc;
         return fncall;
@@ -327,16 +332,18 @@ ASTNode *Parser::parsePrimary() {
         return var;
         }
     }
-    default:
-        throw std::runtime_error("Unexpected token: " + token.to_str());
+    default:{
+      std::string val = (token.type == Token::EOF_TOK) ? "end of file" : token.value;
+      error(token.loc, "Unexpected token: " + val);
+    }
   }
 }
 
 ASTNode *Parser::parseIfExpression() {
   Token iftok = stream.next();
-  stream.expect(Token::LPAREN);
+  expect(Token::LPAREN, "Expected '(' after 'if'.");
   ASTNode *condition = parseExpression();
-  stream.expect(Token::RPAREN);
+  expect(Token::RPAREN, "Expected ')' after 'if' condition.");
 
   ASTNode *then_block = parseExpression();
 
@@ -353,9 +360,9 @@ ASTNode *Parser::parseIfExpression() {
 
 ASTNode *Parser::parseWhileExpression() {
   Token whiletok = stream.next();
-  stream.expect(Token::LPAREN);
+  expect(Token::LPAREN, "Expected '(' after 'while'.");
   ASTNode *condition = parseExpression();
-  stream.expect(Token::RPAREN);
+  expect(Token::RPAREN, "Expected ')' after 'while' condition.");
 
   ASTNode *body = parseExpression();
   auto node = new WhileNode(condition, body);
@@ -366,13 +373,13 @@ ASTNode *Parser::parseWhileExpression() {
 ASTNode *Parser::parseBlock() {
   Token tok = stream.next();
   if(tok.type != Token::LBRACE){
-    throw std::runtime_error("Expected '{' at start of block, got: " + tok.to_str());
+    error(tok.loc, "Expected '{' at start of block: " + tok.value);
   }
   std::vector<ASTNode *> statements;
   while (stream.peek().type != Token::RBRACE) {
     statements.push_back(parseStatement());
   }
-  stream.expect(Token::RBRACE);
+  expect(Token::RBRACE, "Expected '}' at end of block.");
   auto block = new BlockNode(statements);
   block->loc = tok.loc;
   return block;

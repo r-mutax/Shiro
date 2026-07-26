@@ -78,9 +78,10 @@ struct BlockNode : public ASTNode {
 struct VariableDeclareNode : public ASTNode {
     std::string name;
     std::string type_name;
+    SourceLoc type_loc;
     int symbol_id = -1;
 
-    explicit VariableDeclareNode(const std::string& n, const std::string& t = "i64") : ASTNode(Kind::NODE_VARIABLE_DECLARE), name(n), type_name(t){};
+    explicit VariableDeclareNode(const std::string& n, SourceLoc type_loc, const std::string& t = "i64") : ASTNode(Kind::NODE_VARIABLE_DECLARE), name(n), type_name(t), type_loc(type_loc){};
 };
 
 struct VariableNode : public ASTNode {
@@ -123,8 +124,10 @@ struct FunctionDefinitionNode : public ASTNode {
     std::string type_name;
     std::vector<ASTNode*> params;
     BlockNode* body;
+    SourceLoc type_loc;
 
-    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name, std::vector<ASTNode*> params ,BlockNode* body) : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name), type_name(type_name), params(params), body(body) {}
+    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name, std::vector<ASTNode*> params ,BlockNode* body, SourceLoc type_loc)
+        : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name), type_name(type_name), params(params), body(body), type_loc(type_loc) {}
 };
 
 struct TranslationUnitNode : public ASTNode {

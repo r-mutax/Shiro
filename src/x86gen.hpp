@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "irgen.hpp"
+#include "error_reporter.hpp"
 #include <iostream>
 #include <ostream>
 
@@ -149,8 +150,11 @@ struct X86RegAllocState{
     int spill_offset = 8;
 };
 
+struct X86GeneratorError {} ;
+
 class X86Generator{
     const IRProgram& program;
+    ErrorReporter& reporter;
     std::ostream& out;
     const std::vector<std::string> argregs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
@@ -163,11 +167,22 @@ class X86Generator{
     void gen_function(const IRFunction& func);
     void gen_instruction(const IRInstruction& instr, X86RegAllocState& regalloc_state);
 
-    
-    
+    template<typename... Args>
+    [[noreturn]]void error(SourceLoc loc, std::string_view fmt, Args&&... args){
+        std::string msg = std::vformat(fmt, std::make_format_args(args...));
+        reporter.reportError(loc, msg);
+        throw IRGeneratorError();
+    }
+
+    template<typename... Args>
+    [[noreturn]]void fatal(std::string_view fmt, Args&&... args){
+        std::string msg = std::vformat(fmt, std::make_format_args(args...));
+        reporter.reportFatal(msg);
+        throw IRGeneratorError();
+    }    
 public:
-    X86Generator(const IRProgram& program, std::ostream& out = std::cout) 
-        : program(program), out(out) {}
+    X86Generator(const IRProgram& program, ErrorReporter& reporter, std::ostream& out = std::cout) 
+        : program(program), reporter(reporter), out(out) {}
     ~X86Generator() = default;
 
     void generate();

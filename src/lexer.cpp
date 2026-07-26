@@ -1,10 +1,5 @@
 #include "lexer.hpp"
 #include "keyword_map.h"
-#include <iostream>
-
-Lexer::Lexer() {}
-
-Lexer::~Lexer() {}
 
 TokenStream Lexer::lex_src(std::string_view src) {
   TokenStream stream;
@@ -12,24 +7,26 @@ TokenStream Lexer::lex_src(std::string_view src) {
   size_t len = src.size();
 
   size_t line = 1;
-  size_t col = 1 ;
+  size_t col = 1;
   size_t start_col = 1;
 
-  auto create_token = [&](Token::Type type, size_t offset, std::string_view value){
-    stream.tokens.push_back({type, std::string(value), offset, value.size(), {line, start_col}});
+  auto create_token = [&](Token::Type type, size_t offset,
+                          std::string_view value) {
+    stream.tokens.push_back(
+        {type, std::string(value), offset, value.size(), {line, start_col}});
     col += value.size();
   };
 
   for (size_t i = 0; i < len; ++i) {
     char c = src[i];
 
-    if(c == '\n'){
+    if (c == '\n') {
       line++;
       col = 1;
       continue;
     }
 
-    if(std::isspace(c)){
+    if (std::isspace(c)) {
       col++;
       continue;
     }
@@ -51,7 +48,7 @@ TokenStream Lexer::lex_src(std::string_view src) {
       break;
     }
     case '-': {
-      if(i + 1 < len && src[i + 1] == '>'){
+      if (i + 1 < len && src[i + 1] == '>') {
         create_token(Token::ARROW, i, "->");
         i++;
       } else {
@@ -112,28 +109,28 @@ TokenStream Lexer::lex_src(std::string_view src) {
       break;
     }
     case '=': {
-      if(i + 1 < len && src[i + 1] == '='){
+      if (i + 1 < len && src[i + 1] == '=') {
         create_token(Token::EQUAL_EQUAL, i, "==");
         i++;
-      }else{
+      } else {
         create_token(Token::EQUAL, i, "=");
       }
       break;
     }
     case '&': {
-      if(i + 1 < len && src[i + 1] == '&'){
+      if (i + 1 < len && src[i + 1] == '&') {
         create_token(Token::AND_AND, i, "&&");
         i++;
-      }else{
+      } else {
         create_token(Token::AND, i, "&");
       }
       break;
     }
     case '|': {
-      if(i + 1 < len && src[i + 1] == '|'){
+      if (i + 1 < len && src[i + 1] == '|') {
         create_token(Token::OR_OR, i, "||");
         i++;
-      }else{
+      } else {
         create_token(Token::OR, i, "|");
       }
       break;
@@ -147,17 +144,17 @@ TokenStream Lexer::lex_src(std::string_view src) {
       break;
     }
     case '!': {
-      if(i + 1 < len && src[i + 1] == '='){
+      if (i + 1 < len && src[i + 1] == '=') {
         create_token(Token::NOT_EQUAL, i, "!=");
         i++;
-      }else{
+      } else {
         create_token(Token::NOT, i, "!");
       }
       break;
     }
     case '~': {
       create_token(Token::CHILDA, i, "~");
-      break;  
+      break;
     }
     case ':': {
       create_token(Token::COLON, i, ":");
@@ -173,17 +170,17 @@ TokenStream Lexer::lex_src(std::string_view src) {
     case '\n':
       break;
     default: {
-      if(is_ident1(c)){
+      if (is_ident1(c)) {
         size_t s = i;
-        while(i < len && is_ident2(src[i])){
+        while (i < len && is_ident2(src[i])) {
           i++;
         }
         std::string_view ident = src.substr(s, i - s);
         create_token(check_keyword(ident), i, ident);
-        i--;  
+        i--;
         break;
       }
-      std::cerr << "Error: Unknown token: " << c << std::endl;
+      reporter.reportError({line, col}, std::string("Unknown token: ") + c);
       return TokenStream{};
     }
     }
@@ -194,20 +191,15 @@ TokenStream Lexer::lex_src(std::string_view src) {
   return stream;
 }
 
-bool Lexer::is_ident1(char c){
-    return isalpha(c) || c == '_';
-}
+bool Lexer::is_ident1(char c) { return isalpha(c) || c == '_'; }
 
-bool Lexer::is_ident2(char c){
-    return is_ident1(c) || isdigit(c);
-}
+bool Lexer::is_ident2(char c) { return is_ident1(c) || isdigit(c); }
 
-Token::Type Lexer::check_keyword(std::string_view s){
-    for(size_t i = 0; i < std::size(keyword_map); i++){
-        if(s == keyword_map[i].keyword){
-            return keyword_map[i].type;
-        }
+Token::Type Lexer::check_keyword(std::string_view s) {
+  for (size_t i = 0; i < std::size(keyword_map); i++) {
+    if (s == keyword_map[i].keyword) {
+      return keyword_map[i].type;
     }
-    return Token::IDENT;
+  }
+  return Token::IDENT;
 }
-

@@ -77,7 +77,7 @@ std::string X86Generator::activateDst(const Operand& op, X86RegAllocState& regal
   switch(op.kind)
   {
     case Operand::INT_VAL:
-      throw std::runtime_error("Destination operand cannot be integer");
+      fatal("Destination operand cannot be integer");
     case Operand::TEMP:
     {
       if(regalloc_state.is_spill(op)){
@@ -92,10 +92,11 @@ std::string X86Generator::activateDst(const Operand& op, X86RegAllocState& regal
     }
     case Operand::FUNC:
     {
-      throw std::runtime_error("Destination operand cannot be label or function");
+      fatal("Destination operand cannot be label or function");
     }
+    default:
+      fatal("Destination operand is unexpected");
   }
-  throw std::runtime_error("Invalid operand kind in activateDst");
 }
 
 std::string X86Generator::activateSrc1(const Operand& op, X86RegAllocState& regalloc_state){
@@ -121,8 +122,9 @@ std::string X86Generator::activateSrc1(const Operand& op, X86RegAllocState& rega
     {
       return op.name;
     }
+    default:
+      fatal("Source operand is unexpected");
   }
-  throw std::runtime_error("Invalid operand kind in activateSrc1");
 }
 
 std::string X86Generator::activateSrc2(const Operand& op, X86RegAllocState& regalloc_state){
@@ -148,13 +150,14 @@ std::string X86Generator::activateSrc2(const Operand& op, X86RegAllocState& rega
     {
       return op.name;
     }
+    default:
+      fatal("Source operand is unexpected");
   }
-  throw std::runtime_error("Invalid operand kind in activateSrc2");
 }
 
 void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_state){
   if(op.kind == Operand::INT_VAL){
-    throw std::runtime_error("Destination operand cannot be integer");
+    fatal("Destination operand cannot be integer");
   }
 
   if(regalloc_state.is_spill(op)){
@@ -176,7 +179,7 @@ void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_s
           << "], " << regalloc_state.SpillDstReg << std::endl;
         break;
       default:
-        throw std::runtime_error("Invalid operand type");
+        fatal("Invalid operand type");
     }
   } else {
     std::string reg = regalloc_state.free_regs[regalloc_state.temp_to_reg[op.temp_id]].first; 
@@ -194,7 +197,7 @@ void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_s
         case 8:
           break;
         default:
-          throw std::runtime_error("Invalid operand type");
+          fatal("Invalid operand type");
       }
     } else {
       switch(op.type.bytes){
@@ -210,7 +213,7 @@ void X86Generator::deactivateDst(const Operand& op, X86RegAllocState& regalloc_s
         case 8:
           break;
         default:
-          throw std::runtime_error("Invalid operand type");
+          fatal("Invalid operand type");
       }
     }
   }
@@ -250,8 +253,7 @@ void X86Generator::gen_function(const IRFunction &func) {
       out << "  mov " << dst << ", " << argregs[i] << std::endl;
       deactivateDst(func.param_temps[i], regalloc_state);
     } else {
-      std::cerr << "Error: Function with more than 6 arguments not supported yet" << std::endl;
-      exit(1);
+      fatal("Function with more than 6 arguments not supported yet");
     }
   }
 
@@ -291,8 +293,7 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
         std::string reg = activateSrc1(instr.args[i], regalloc_state);
         out << "  mov " << argregs[i] << ", " << reg << std::endl;
       } else {
-        std::cerr << "Error: Function with more than 6 arguments not supported yet" << std::endl;
-        exit(1);
+        fatal("Function with more than 6 arguments not supported yet");
       }
     }
     out << "  call " << instr.src1.name << std::endl;
@@ -627,6 +628,6 @@ void X86Generator::gen_instruction(const IRInstruction &instr,
     break;
   }
   default:
-    throw std::runtime_error("Unknown instruction");
+    fatal("Unknown instruction");
   }
 }

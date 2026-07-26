@@ -2,10 +2,13 @@
 #define SHIRO_SEMANTICS_HPP
 
 #include "AST.hpp"
+#include "error_reporter.hpp"
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include <iostream>
+#include <format>
+
+struct SemanticsError {};
 
 struct Symbol {
     enum Kind { VARIABLE, FUNCTION, TYPE } kind;
@@ -52,6 +55,7 @@ struct Scope {
 };
 
 class Semantics {
+    ErrorReporter& reporter;
     Scope global_scope;
     Scope* current_scope = nullptr;
     int symbol_id = 0;
@@ -82,7 +86,6 @@ class Semantics {
             symbol->id = symbol_id++;
             symbol->type_info = type_info;
         } else {
-            std::cerr << "Error: Variable " << name << " is already declared" << std::endl;
             return nullptr;
         }
         return symbol;
@@ -94,7 +97,6 @@ class Semantics {
             // function need not system id
             symbol->type_info = ret_type;
         } else {
-            std::cerr << "Error: Function " << name << " is already declared" << std::endl;
             return nullptr;
         }
         return symbol;
@@ -105,7 +107,6 @@ class Semantics {
         if(symbol != nullptr){
             symbol->type_info = type_info;
         } else {
-            std::cerr << "Error: Type " << name << " is already declared" << std::endl;
             return nullptr;
         }
         return symbol;
@@ -125,8 +126,15 @@ class Semantics {
     const Type* u64_t = nullptr;
     const Type* unknown = nullptr;
 
+    template<typename... Args>
+    [[noreturn]]void error(SourceLoc loc, std::string_view fmt, Args&&... args){
+        std::string msg = std::vformat(fmt, std::make_format_args(args...));
+        reporter.reportError(loc, msg);
+        throw SemanticsError();
+    }
+
 public:
-    Semantics() = default;
+    Semantics(ErrorReporter& reporter) : reporter(reporter) {}
     ~Semantics() = default;
 
     bool analyze(ASTNode* ast);

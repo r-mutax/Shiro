@@ -1,6 +1,5 @@
 #include "semantics.hpp"
 #include "AST.hpp"
-#include <iostream>
 
 bool Semantics::analyze(ASTNode* ast){
     if(!ast) {
@@ -32,16 +31,14 @@ bool Semantics::checkNode(ASTNode* node){
 
             const Symbol* type_sym = current_scope->find_recursive(fd->type_name);
             if(type_sym == nullptr){
-                std::cerr << "Error: Return type " << fd->type_name << " is not declared" << std::endl;
-                return false;
+                error(fd->type_loc, "Cannot find type '{}' in this scope", fd->type_name);
             }
             if(type_sym->kind != Symbol::TYPE){
-                std::cerr << "Error: " << fd->type_name << " is not a type" << std::endl;
-                return false;
+                error(fd->type_loc, "'{}' is not a type", fd->type_name);
             }
             Symbol* func_sym = declare_function(fd->fn_name, type_sym->type_info);
             if(func_sym == nullptr){
-                return false;
+                error(fd->loc, "Function '{}' is already declared", fd->fn_name);
             }
             fd->evaluated_type = type_sym->type_info;
             current_func_return_types.push_back(fd->evaluated_type);
@@ -49,17 +46,16 @@ bool Semantics::checkNode(ASTNode* node){
             scopeIn();
 
             for(auto& it : fd->params){
+                auto* vd = static_cast<VariableDeclareNode*>(it);
+
+                if(current_scope->find(vd->name) != nullptr){
+                    error(vd->loc, "Duplicated parameter '{}'", vd->name);
+                }
                 if(!checkNode(it)) return false;
 
-                auto* vd = static_cast<VariableDeclareNode*>(it);
-                const Symbol* param_sym = current_scope->find_recursive(vd->name);
-                if(param_sym == nullptr){
-                    std::cerr << "Error: Param " << vd->name << " is not declared" << std::endl;
-                    return false;
-                }
+                const Symbol* param_sym = current_scope->find(vd->name);
                 if(param_sym->kind != Symbol::VARIABLE){
-                    std::cerr << "Error: " << vd->name << " is not a variable" << std::endl;
-                    return false;
+                    error(vd->loc, "'{}' is not a variable", vd->name);
                 }
 
                 func_sym->params.push_back(const_cast<Symbol*>(param_sym));
@@ -77,17 +73,14 @@ bool Semantics::checkNode(ASTNode* node){
             
             const Symbol* func_sym = current_scope->find_recursive(fc->fn_name);
             if(func_sym == nullptr){
-                std::cerr << "Error: Function " << fc->fn_name << " is not declared" << std::endl;
-                return false;
+                error(fc->loc, "Function '{}' is not declared", fc->fn_name);
             }
             if(func_sym->kind != Symbol::FUNCTION){
-                std::cerr << "Error: " << fc->fn_name << " is not a function" << std::endl;
-                return false;
+                error(fc->loc, "'{}' is not a function", fc->fn_name);
             }
 
             if(fc->args.size() != func_sym->params.size()){
-                std::cerr << "Error: Function " << fc->fn_name << " expects " << func_sym->params.size() << " arguments, but got " << fc->args.size() << std::endl;
-                return false;
+                error(fc->loc, "Function '{}' expects {} arguments, but got {} arguments.", fc->fn_name, func_sym->params.size(), fc->args.size());
             }
 
             for(size_t i = 0; i < fc->args.size(); i++){
@@ -99,8 +92,8 @@ bool Semantics::checkNode(ASTNode* node){
                 }
 
                 if(arg->evaluated_type != func_sym->params[i]->type_info){
-                    std::cerr << "Error: Argument " << i << " of function " << fc->fn_name << " has wrong type" << std::endl;
-                    return false;
+                    error(arg->loc, "Type mismatch in argument {} of function '{}'. Expected '{}', but got '{}'", 
+                        i + 1, fc->fn_name, func_sym->params[i]->type_info->name, arg->evaluated_type->name);
                 }
             }
             
@@ -113,16 +106,15 @@ bool Semantics::checkNode(ASTNode* node){
 
             const Symbol* type_sym = current_scope->find_recursive(vd->type_name);
             if(type_sym == nullptr){
-                std::cerr << "Error: Type " << vd->type_name << " is not declared" << std::endl;
-                return false;
+                error(vd->type_loc, "Type '{}' is not declared", vd->type_name);
             }
             if(type_sym->kind != Symbol::TYPE){
-                std::cerr << "Error: " << vd->type_name << " is not a type" << std::endl;
-                return false;
+                error(vd->type_loc, "'{}' is not a type", vd->type_name);
             }
 
             Symbol* sym = declare_variable(vd->name, type_sym->type_info);
             if(sym == nullptr){
+                error(vd->loc, "Variable '{}' is already declared", vd->name);
                 return false;
             }
 
@@ -135,12 +127,10 @@ bool Semantics::checkNode(ASTNode* node){
             const Symbol* sym = current_scope->find_recursive(vd->name);
 
             if(sym == nullptr){
-                std::cerr << "Error: Variable " << vd->name << " is not declared" << std::endl;
-                return false;
+                error(vd->loc, "Variable '{}' is not declared", vd->name);
             }
             if(sym->type_info->name == "unknown"){
-                std::cerr << "Error: Cannot infer type of variable " << vd->name << " before assignment" << std::endl;
-                return false;
+                error(vd->loc, "Cannot infer type of variable '{}' before assignment", vd->name);
             }
 
             vd->symbol_id = sym->id;
@@ -152,8 +142,7 @@ bool Semantics::checkNode(ASTNode* node){
             auto* rs = static_cast<ReturnNode*>(node);
 
             if(current_func_return_types.empty()){
-                std::cerr << "Error: Return statement is not in a function" << std::endl;
-                return false;
+                error(rs->loc, "'return' cannot be used outside of function");
             }
 
             const Type* return_type = current_func_return_types.back();
@@ -164,8 +153,7 @@ bool Semantics::checkNode(ASTNode* node){
             }
 
             if(return_type != rs->expr->evaluated_type){
-                std::cerr << "Error: Return type" << return_type->name << " does not match expression type " << rs->expr->evaluated_type->name << std::endl;
-                return false;
+                error(rs->loc, "Return type '{}' does not match expression type '{}'", return_type->name, rs->expr->evaluated_type->name);
             }
 
             rs->evaluated_type = return_type;
@@ -198,8 +186,8 @@ bool Semantics::checkNode(ASTNode* node){
             }
 
             if(bo->left->evaluated_type != bo->right->evaluated_type){
-                std::cerr << "Error: Types of left and right operands do not match" << std::endl;
-                return false;
+                error(bo->loc, "Types of left and right operands do not match. Left: '{}', Right: '{}'", 
+                    bo->left->evaluated_type->name, bo->right->evaluated_type->name);
             }
 
             if (bo->op.type == Token::AND_AND || bo->op.type == Token::OR_OR ||
@@ -222,15 +210,13 @@ bool Semantics::checkNode(ASTNode* node){
             auto* as = static_cast<AssignmentNode*>(node);
 
             if(as->lvalue->kind != ASTNode::NODE_VARIABLE){
-                std::cerr << "Error: Left value of assignment is not a variable" << std::endl;
-                return false;
+                error(as->lvalue->loc, "Left value of assignment is not a variable");
             }
 
             auto* var_node = static_cast<VariableNode*>(as->lvalue);
             auto* sym = (Symbol*)(current_scope->find_recursive(var_node->name));
             if(sym == nullptr){
-                std::cerr << "Error: Variable " << var_node->name << " is not declared" << std::endl;
-                return false;
+                error(var_node->loc, "Variable '{}' is not declared", var_node->name);
             }
 
             if(!checkNode(as->expr)) return false;
@@ -245,8 +231,7 @@ bool Semantics::checkNode(ASTNode* node){
             var_node->evaluated_type = sym->type_info;
 
             if(as->lvalue->evaluated_type != as->expr->evaluated_type){
-                std::cerr << "Error: Type mismatch in assignment" << std::endl;
-                return false;
+                error(as->loc, "Type mismatch in assignment. Left: '{}', Right: '{}'", as->lvalue->evaluated_type->name, as->expr->evaluated_type->name);
             }
             as->evaluated_type = var_node->evaluated_type;
             return true;
@@ -268,8 +253,8 @@ bool Semantics::checkNode(ASTNode* node){
 
                 if(if_node->then_block->evaluated_type
                     != if_node->else_block->evaluated_type){
-                    std::cerr << "Error: Type mismatch between 'then' and 'else' branches" << std::endl;
-                    return false;
+                    error(if_node->loc, "Type mismatch between 'then' and 'else' branches. Then: '{}', Else: '{}'"
+                        , if_node->then_block->evaluated_type->name, if_node->else_block->evaluated_type->name);
                 }
             }
             if_node->evaluated_type = if_node->then_block->evaluated_type;

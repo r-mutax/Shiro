@@ -3,9 +3,13 @@
 
 #include "AST.hpp"
 #include "token.hpp"
+#include "error_reporter.hpp"
+
+struct ParseError{};
 
 class Parser {
     TokenStream& stream;
+    ErrorReporter& reporter;
 
     ASTNode* parseProgram();
     ASTNode* parseDefinition();
@@ -32,8 +36,20 @@ class Parser {
     ASTNode* parseIfExpression();
     ASTNode* parseWhileExpression();
 
+    [[noreturn]]void error(SourceLoc loc, const std::string& msg){
+        reporter.reportError(loc, msg);
+        throw ParseError();
+    }
+
+    void expect(Token::Type type, const std::string& error_msg){
+        if(stream.peek().type != type){
+            error(stream.peek().loc, error_msg);
+        }
+        stream.next();
+    }
+
 public:
-    Parser(TokenStream& stream) : stream(stream) {}
+    Parser(TokenStream& stream, ErrorReporter& reporter) : stream(stream), reporter(reporter) {}
     ~Parser() = default;
 
     ASTNode* parse();

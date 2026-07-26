@@ -3,6 +3,8 @@
 
 #include <string_view>
 #include <string>
+#include "error_reporter.hpp"
+
 struct CompilerEnvironment {
     std::string output_filename;
     std::string input_filename;
@@ -15,6 +17,7 @@ struct CompilerEnvironment {
 class Compiler {
 public:
     CompilerEnvironment env;
+    ErrorReporter reporter;
 
     Compiler();
     ~Compiler();

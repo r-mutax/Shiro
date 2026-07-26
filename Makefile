@@ -1,4 +1,4 @@
-CXX = g++
+CXX = g++-13
 CXXFLAGS = -std=c++20 -Wall -Wextra -g -MMD -MP -Wno-missing-field-initializers
 SRC = $(wildcard src/*.cpp)
 OBJDIR = obj
@@ -22,6 +22,7 @@ clean:
 
 test: $(TARGET)
 	bash test.sh
+	bash test_errors.sh
 
 -include $(DEPS)
 

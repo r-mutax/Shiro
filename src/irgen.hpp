@@ -2,9 +2,11 @@
 #define SHIRO_IR_HPP
 
 #include "AST.hpp"
+#include "error_reporter.hpp"
 #include <unordered_map>
 #include <set>
 #include <memory>
+#include <format>
 
 struct OperandType {
     int bytes;
@@ -224,7 +226,10 @@ public:
     std::vector<IRFunction> functions;
 };
 
+struct IRGeneratorError {};
+
 class IRGenerator {
+    ErrorReporter& reporter;
     IRProgram program;
     int next_temp = 0;
     int next_label = 0;
@@ -342,8 +347,21 @@ class IRGenerator {
     Operand gen_stmt(ASTNode* node);
     Operand gen_expr(ASTNode* node);
 
+    template<typename... Args>
+    [[noreturn]]void error(SourceLoc loc, std::string_view fmt, Args&&... args){
+        std::string msg = std::vformat(fmt, std::make_format_args(args...));
+        reporter.reportError(loc, msg);
+        throw IRGeneratorError();
+    }
+
+    template<typename... Args>
+    [[noreturn]]void fatal(std::string_view fmt, Args&&... args){
+        std::string msg = std::vformat(fmt, std::make_format_args(args...));
+        reporter.reportFatal(msg);
+        throw IRGeneratorError();
+    }
 public:
-    IRGenerator() = default;
+    IRGenerator(ErrorReporter& reporter) : reporter(reporter) {}
     ~IRGenerator() = default;
 
     bool generate(ASTNode* ast);

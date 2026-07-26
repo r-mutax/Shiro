@@ -5,7 +5,7 @@
 bool IRGenerator::generate(ASTNode* ast) {
 
     if(ast->kind != ASTNode::NODE_TRANSLATION_UNIT) {
-        throw std::runtime_error("Expected translation unit");
+        fatal("Expected translation unit");
     }
 
     TranslationUnitNode* tu = static_cast<TranslationUnitNode*>(ast);
@@ -20,7 +20,7 @@ bool IRGenerator::generate(ASTNode* ast) {
 IRFunction IRGenerator::gen_function(ASTNode* node){
 
     if(node->kind != ASTNode::NODE_FUNCTION_DEFINITION) {
-        throw std::runtime_error("Expected function definition");
+        error(node->loc, "Expected function definition.");
     }
 
     FunctionDefinitionNode* func_def = static_cast<FunctionDefinitionNode*>(node);
@@ -112,7 +112,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node){
         emit_jmp(current_end_label.back());
         return ret_val;
     } else {
-        throw std::runtime_error("Unexpected statement");
+        error(node->loc, "Unexpected statement.");
     }
 }
 
@@ -124,7 +124,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         VariableNode* v = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(v->symbol_id);
         if(it == symid_to_temp.end()){
-            throw std::runtime_error("IRGen Error: variable'" + v->name + "'not found in symbol map");
+            fatal("IRGen Error: variable'" + v->name + "'not found in symbol map");
         }
         return it->second;
     } else if(node->kind == ASTNode::NODE_FUNCTION_CALL){
@@ -197,7 +197,7 @@ Operand IRGenerator::gen_expr(ASTNode* node){
         auto it = symid_to_temp.find(var->symbol_id);
 
         if(it == symid_to_temp.end()){
-            throw std::runtime_error("IRGen Error: variable'" + var->name + "'not found in symbol map");
+            fatal("IRGen Error: variable'" + var->name + "'not found in symbol map");
         }
         emit_mov(it->second, value);
         return value;
@@ -306,13 +306,13 @@ Operand IRGenerator::gen_expr(ASTNode* node){
                     emit_mod(ret, left, right);
                     break;
                 default:
-                    throw std::runtime_error("Unexpected operator: " + bin_op->op.to_str());
+                    error(bin_op->loc, "Unexpected operator: " + bin_op->op.to_str());
             }
             return ret;
         }
     }
 
-    throw std::runtime_error("Expected expression");
+    fatal("Expected expression");
 }
 
 void IRGenerator::dump(){
