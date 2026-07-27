@@ -3,10 +3,10 @@
 
 #include "AST.hpp"
 #include "error_reporter.hpp"
+#include <format>
+#include <memory>
 #include <unordered_map>
 #include <vector>
-#include <memory>
-#include <format>
 
 struct SemanticsError {};
 
@@ -23,11 +23,11 @@ struct Symbol {
 struct Scope {
     std::unordered_map<std::string, Symbol> symbols;
     Scope* parent = nullptr;
-    
+
     // find symbols in this scope
     const Symbol* find(const std::string& name) const {
         auto it = symbols.find(name);
-        if(it != symbols.end()){
+        if (it != symbols.end()) {
             return &it->second;
         }
         return nullptr;
@@ -36,17 +36,17 @@ struct Scope {
     // find symbols in this scope or parent
     const Symbol* find_recursive(const std::string& name) const {
         auto it = symbols.find(name);
-        if(it != symbols.end()){
+        if (it != symbols.end()) {
             return &it->second;
         }
-        if(parent != nullptr){
+        if (parent != nullptr) {
             return parent->find_recursive(name);
         }
         return nullptr;
     }
 
-    Symbol* declare(Symbol::Kind kind, const std::string& name){
-        if(find(name) != nullptr){
+    Symbol* declare(Symbol::Kind kind, const std::string& name) {
+        if (find(name) != nullptr) {
             return nullptr;
         }
         symbols.emplace(name, Symbol{kind, name});
@@ -66,23 +66,23 @@ class Semantics {
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
 
     bool checkNode(ASTNode* node);
-    
-    void scopeIn(){
+
+    void scopeIn() {
         auto scope = std::make_unique<Scope>();
         scope->parent = current_scope;
         current_scope = scope.get();
         allocated_scopes.push_back(std::move(scope));
     }
 
-    void scopeOut(){
-        if(current_scope != nullptr){
+    void scopeOut() {
+        if (current_scope != nullptr) {
             current_scope = current_scope->parent;
         }
     }
 
-    Symbol* declare_variable(const std::string& name, const Type* type_info){
+    Symbol* declare_variable(const std::string& name, const Type* type_info) {
         Symbol* symbol = current_scope->declare(Symbol::VARIABLE, name);
-        if(symbol != nullptr){
+        if (symbol != nullptr) {
             symbol->id = symbol_id++;
             symbol->type_info = type_info;
         } else {
@@ -91,9 +91,9 @@ class Semantics {
         return symbol;
     }
 
-    Symbol* declare_function(const std::string& name, const Type* ret_type){
+    Symbol* declare_function(const std::string& name, const Type* ret_type) {
         Symbol* symbol = current_scope->declare(Symbol::FUNCTION, name);
-        if(symbol != nullptr){
+        if (symbol != nullptr) {
             // function need not system id
             symbol->type_info = ret_type;
         } else {
@@ -102,9 +102,9 @@ class Semantics {
         return symbol;
     }
 
-    Symbol* declare_type(const std::string& name, const Type* type_info){
+    Symbol* declare_type(const std::string& name, const Type* type_info) {
         Symbol* symbol = current_scope->declare(Symbol::TYPE, name);
-        if(symbol != nullptr){
+        if (symbol != nullptr) {
             symbol->type_info = type_info;
         } else {
             return nullptr;
@@ -113,7 +113,8 @@ class Semantics {
     }
 
     const Type* alloc_type(Type t);
-    const Type* make_primitive(const std::string& name, int size, bool isUnsigned);
+    const Type* make_primitive(const std::string& name, int size,
+                               bool isUnsigned);
     void init_builtins();
 
     const Type* i8_t = nullptr;
@@ -126,14 +127,15 @@ class Semantics {
     const Type* u64_t = nullptr;
     const Type* unknown = nullptr;
 
-    template<typename... Args>
-    [[noreturn]]void error(SourceLoc loc, std::string_view fmt, Args&&... args){
+    template <typename... Args>
+    [[noreturn]] void error(SourceLoc loc, std::string_view fmt,
+                            Args&&... args) {
         std::string msg = std::vformat(fmt, std::make_format_args(args...));
         reporter.reportError(loc, msg);
         throw SemanticsError();
     }
 
-public:
+  public:
     Semantics(ErrorReporter& reporter) : reporter(reporter) {}
     ~Semantics() = default;
 

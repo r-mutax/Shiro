@@ -1,64 +1,64 @@
 #ifndef SHIRO_TOKEN_HPP
 #define SHIRO_TOKEN_HPP
 
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
 
-struct SourceLoc{
+struct SourceLoc {
     size_t line = 1;
     size_t col = 1;
 };
 
 struct Token {
     enum Type {
-        NUMBER,                 // 0-9
-        CHAR,                   // character
-        PLUS,                   // +
-        MINUS,                  // -
-        ASTERISK,               // *
-        SLASH,                  // /
-        MOD,                    // %
-        LPAREN,                 // (
-        RPAREN,                 // )
-        LBRACE,                 // {
-        RBRACE,                 // }
-        LSHIFT,                 // <<
-        RSHIFT,                 // >>
-        AND,                    // &
-        AND_AND,                // &&
-        HAT,                    // ^
-        OR,                     // |
-        OR_OR,                  // ||
-        LT,                     // <
-        GT,                     // >
-        LE,                     // <= 
-        GE,                     // >=
-        COLON,                  // : 
-        SEMICOLON,              // ;
-        EQUAL,                  // =
-        EQUAL_EQUAL,            // ==
-        NOT_EQUAL,              // !=
-        NOT,                    // !
-        CHILDA,                 // ~
-        ARROW,                  // ->
-        COMMA,                  // ,
-        LET,                    // let
-        IF,                     // if
-        WHILE,                  // while
-        ELSE,                   // else
-        RETURN,                 // return
-        UNKNOWN,                // unknown
-        FN,                     // fn
-        I8,                     // i8
-        I16,                    // i16
-        I32,                    // i32
-        I64,                    // i64
-        U8,                     // u8
-        U16,                    // u16
-        U32,                    // u32
-        U64,                    // u64
-        IDENT,                  // Identifier
+        NUMBER,      // 0-9
+        CHAR,        // character
+        PLUS,        // +
+        MINUS,       // -
+        ASTERISK,    // *
+        SLASH,       // /
+        MOD,         // %
+        LPAREN,      // (
+        RPAREN,      // )
+        LBRACE,      // {
+        RBRACE,      // }
+        LSHIFT,      // <<
+        RSHIFT,      // >>
+        AND,         // &
+        AND_AND,     // &&
+        HAT,         // ^
+        OR,          // |
+        OR_OR,       // ||
+        LT,          // <
+        GT,          // >
+        LE,          // <=
+        GE,          // >=
+        COLON,       // :
+        SEMICOLON,   // ;
+        EQUAL,       // =
+        EQUAL_EQUAL, // ==
+        NOT_EQUAL,   // !=
+        NOT,         // !
+        CHILDA,      // ~
+        ARROW,       // ->
+        COMMA,       // ,
+        LET,         // let
+        IF,          // if
+        WHILE,       // while
+        ELSE,        // else
+        RETURN,      // return
+        UNKNOWN,     // unknown
+        FN,          // fn
+        I8,          // i8
+        I16,         // i16
+        I32,         // i32
+        I64,         // i64
+        U8,          // u8
+        U16,         // u16
+        U32,         // u32
+        U64,         // u64
+        IDENT,       // Identifier
         EOF_TOK,
     };
 
@@ -69,7 +69,7 @@ struct Token {
     SourceLoc loc;
 
     std::string to_str() const {
-        switch(type) {
+        switch (type) {
             case NUMBER:
                 return "NUMBER: " + value;
             case CHAR:
@@ -170,59 +170,53 @@ struct Token {
         return "UNKNOWN";
     }
 
-    bool isTypeCandidate(){
-        return type == Token::I8
-            || type == Token::I16
-            || type == Token::I32
-            || type == Token::I64 
-            || type == Token::U8
-            || type == Token::U16
-            || type == Token::U32
-            || type == Token::U64
-            || type == Token::IDENT;
+    bool isTypeCandidate() {
+        return type == Token::I8 || type == Token::I16 || type == Token::I32 ||
+               type == Token::I64 || type == Token::U8 || type == Token::U16 ||
+               type == Token::U32 || type == Token::U64 || type == Token::IDENT;
     }
 };
 
 class TokenStream {
-public:
-    TokenStream(){}
-    ~TokenStream(){}
+  public:
+    TokenStream() {}
+    ~TokenStream() {}
 
     std::vector<Token> tokens;
     size_t cursor = 0;
 
     const Token& peek() {
-        if(cursor >= tokens.size()) {
+        if (cursor >= tokens.size()) {
             throw std::runtime_error("Unexpected EOF");
         }
         return tokens[cursor];
     }
 
-    Token next(){
-        if(cursor >= tokens.size()) {
+    Token next() {
+        if (cursor >= tokens.size()) {
             throw std::runtime_error("Unexpected EOF");
         }
         return tokens[cursor++];
     }
 
-    bool consume(Token::Type type){
-        if(peek().type == type){
+    bool consume(Token::Type type) {
+        if (peek().type == type) {
             cursor++;
             return true;
         }
 
         return false;
     }
-    
-    void expect(Token::Type type){
-        if(peek().type != type){
+
+    void expect(Token::Type type) {
+        if (peek().type != type) {
             throw std::runtime_error("Expected " + peek().to_str());
         }
         cursor++;
     }
 
-    bool is_eof(){
-        if(cursor >= tokens.size()) {
+    bool is_eof() {
+        if (cursor >= tokens.size()) {
             return true;
         }
 

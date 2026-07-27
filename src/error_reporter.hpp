@@ -5,20 +5,20 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include "token.hpp"
 
-class ErrorReporter{
+class ErrorReporter {
 
     std::string filename;
     std::string src;
     std::vector<std::string_view> lines;
 
     bool has_error = false;
-public:
+
+  public:
     ErrorReporter() = default;
     void SetFile(std::string filename, std::string src);
     void reportError(SourceLoc loc, const std::string& msg);
-    [[noreturn]]void reportFatal(const std::string& msg);
+    [[noreturn]] void reportFatal(const std::string& msg);
 
     bool hasError() const { return has_error; }
 };

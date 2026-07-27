@@ -1,9 +1,9 @@
 #ifndef SHIRO_COMPILER_HPP
 #define SHIRO_COMPILER_HPP
 
-#include <string_view>
-#include <string>
 #include "error_reporter.hpp"
+#include <string>
+#include <string_view>
 
 struct CompilerEnvironment {
     std::string output_filename;
@@ -13,9 +13,8 @@ struct CompilerEnvironment {
     std::string execute_code;
 };
 
-
 class Compiler {
-public:
+  public:
     CompilerEnvironment env;
     ErrorReporter reporter;
 

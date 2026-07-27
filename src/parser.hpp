@@ -2,10 +2,10 @@
 #define SHIRO_PARSER_HPP
 
 #include "AST.hpp"
-#include "token.hpp"
 #include "error_reporter.hpp"
+#include "token.hpp"
 
-struct ParseError{};
+struct ParseError {};
 
 class Parser {
     TokenStream& stream;
@@ -36,20 +36,21 @@ class Parser {
     ASTNode* parseIfExpression();
     ASTNode* parseWhileExpression();
 
-    [[noreturn]]void error(SourceLoc loc, const std::string& msg){
+    [[noreturn]] void error(SourceLoc loc, const std::string& msg) {
         reporter.reportError(loc, msg);
         throw ParseError();
     }
 
-    void expect(Token::Type type, const std::string& error_msg){
-        if(stream.peek().type != type){
+    void expect(Token::Type type, const std::string& error_msg) {
+        if (stream.peek().type != type) {
             error(stream.peek().loc, error_msg);
         }
         stream.next();
     }
 
-public:
-    Parser(TokenStream& stream, ErrorReporter& reporter) : stream(stream), reporter(reporter) {}
+  public:
+    Parser(TokenStream& stream, ErrorReporter& reporter)
+        : stream(stream), reporter(reporter) {}
     ~Parser() = default;
 
     ASTNode* parse();

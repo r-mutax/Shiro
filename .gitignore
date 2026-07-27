@@ -12,3 +12,5 @@ a.out
 .agents/*
 .clang-format
 .clangd
+
+node_modules/*
