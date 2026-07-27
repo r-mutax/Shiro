@@ -292,6 +292,12 @@ ASTNode *Parser::parsePrimary() {
         num->loc = token.loc;
         return num;
     }
+    case Token::CHAR: {
+      stream.next();
+      auto num = new CharLiteralNode(std::stoll(token.value));
+      num->loc = token.loc;
+      return num;
+    }
     case Token::IF: {
         return parseIfExpression();
     }

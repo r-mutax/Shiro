@@ -18,6 +18,11 @@ bool Semantics::analyze(ASTNode* ast){
 bool Semantics::checkNode(ASTNode* node){
     if(!node) return true;
 
+    auto isAutoCastInteger = [](ASTNode* node){
+        return node->kind == ASTNode::NODE_INTEGER ||
+                node->kind == ASTNode::NODE_CHAR_LITERAL;
+    };
+
     switch(node->kind){
         case ASTNode::NODE_TRANSLATION_UNIT:{
             auto* tu = static_cast<TranslationUnitNode*>(node);
@@ -87,7 +92,7 @@ bool Semantics::checkNode(ASTNode* node){
                 auto* arg = fc->args[i];
                 if(!checkNode(arg)) return false;
 
-                if(arg->kind == ASTNode::NODE_INTEGER){
+                if(isAutoCastInteger(arg)){
                     arg->evaluated_type = func_sym->params[i]->type_info;
                 }
 
@@ -148,7 +153,7 @@ bool Semantics::checkNode(ASTNode* node){
             const Type* return_type = current_func_return_types.back();
             if(!checkNode(rs->expr)) return false;
 
-            if(rs->expr->kind == ASTNode::NODE_INTEGER){
+            if(isAutoCastInteger(rs->expr)){
                 rs->expr->evaluated_type = return_type;
             }
 
@@ -161,6 +166,10 @@ bool Semantics::checkNode(ASTNode* node){
         }
         case ASTNode::NODE_INTEGER:{
             node->evaluated_type = i64_t;
+            return true;
+        }
+        case ASTNode::NODE_CHAR_LITERAL:{
+            node->evaluated_type = i8_t;
             return true;
         }
         case ASTNode::NODE_UNARY_OP:{
@@ -179,9 +188,9 @@ bool Semantics::checkNode(ASTNode* node){
             if(!checkNode(bo->left)) return false;
             if(!checkNode(bo->right)) return false;
 
-            if(bo->right->kind == ASTNode::NODE_INTEGER){
+            if(isAutoCastInteger(bo->right)){
                 bo->right->evaluated_type = bo->left->evaluated_type;
-            } else if(bo->left->kind == ASTNode::NODE_INTEGER){
+            } else if(isAutoCastInteger(bo->left)){
                 bo->left->evaluated_type = bo->right->evaluated_type;
             }
 
@@ -223,7 +232,7 @@ bool Semantics::checkNode(ASTNode* node){
 
             if(sym->type_info->name == "unknown"){
                 sym->type_info = as->expr->evaluated_type;
-            } else if(as->expr->kind == ASTNode::NODE_INTEGER){
+            } else if(isAutoCastInteger(as->expr)){
                 as->expr->evaluated_type = sym->type_info;
             }
 
@@ -244,10 +253,10 @@ bool Semantics::checkNode(ASTNode* node){
             if(if_node->else_block){
                 if(!checkNode(if_node->else_block)) return false;
 
-                if(if_node->then_block->kind == ASTNode::NODE_INTEGER){
+                if(isAutoCastInteger(if_node->then_block)){
                     if_node->then_block->evaluated_type = if_node->else_block->evaluated_type;
                 }
-                if(if_node->else_block->kind == ASTNode::NODE_INTEGER){
+                if(isAutoCastInteger(if_node->else_block)){
                     if_node->else_block->evaluated_type = if_node->then_block->evaluated_type;
                 }
 

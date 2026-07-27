@@ -158,5 +158,12 @@ assert "fn sum6(a: i8, b: i8, c: i8, d: i8, e: i8, f: i8) -> i8 { a + b + c + d 
 assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main() -> i8 { fact(5); }" 120
 assert "fn test() -> i8 {10;} fn main() -> i8 { if(1){ return 10; } else { return test(); } 1; }" 10
 
+# --- Character Literals ---
+assert "fn main() -> i8 { 'A'; }" 65
+assert "fn main() -> i8 { '\n'; }" 10
+assert "fn main() -> i8 { '\\\\'; }" 92
+assert "fn main() -> i8 { 'A' + 1; }" 66
+assert "fn main() -> i8 { let c: u8; c = 'Z'; c; }" 90
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

@@ -120,6 +120,9 @@ Operand IRGenerator::gen_expr(ASTNode* node){
     if(node->kind == ASTNode::NODE_INTEGER){
         NumberNode* num = static_cast<NumberNode*>(node);
         return Operand::IntVal(num->value);
+    } else if(node->kind == ASTNode::NODE_CHAR_LITERAL){
+        CharLiteralNode* ch = static_cast<CharLiteralNode*>(node);
+        return Operand::IntVal(ch->value);
     } else if(node->kind == ASTNode::NODE_VARIABLE){
         VariableNode* v = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(v->symbol_id);

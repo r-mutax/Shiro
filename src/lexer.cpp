@@ -43,6 +43,44 @@ TokenStream Lexer::lex_src(std::string_view src) {
       i = j - 1;
       break;
     }
+    case '\'' : {
+      size_t s = i;
+      i++;
+
+      if(i >= len){
+        reporter.reportError({line, col}, "Unterminated character literal");
+        return TokenStream{};
+      }
+
+      char char_val = 0;
+      if(src[i] == '\\'){
+        i++;
+        if(i >= len){
+          reporter.reportError({line, col}, "Unterminated character literal");
+          return TokenStream{};
+        }
+
+        if(src[i] == 'n') char_val = '\n';
+        else if(src[i] == 't') char_val ='\t';
+        else if (src[i] == 'r') char_val = '\r';
+        else if (src[i] == '0') char_val = '\0';
+        else if (src[i] == '\\') char_val = '\\';
+        else if (src[i] == '\'') char_val = '\'';
+        else {
+          reporter.reportError({line, col}, std::string("Unknown escape sequence: \\") + src[i]);
+          return TokenStream{};
+        }
+      } else {
+        char_val = src[i];
+      }
+      ++i;
+      if (i >= len || src[i] != '\'') {
+        reporter.reportError({line, col}, "Expected '\'' at the end of character literal");
+        return TokenStream{};
+      }
+      create_token(Token::CHAR, s, std::to_string(static_cast<int>(char_val)));
+      break;
+    }
     case '+': {
       create_token(Token::PLUS, i, "+");
       break;

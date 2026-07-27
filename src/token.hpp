@@ -13,6 +13,7 @@ struct SourceLoc{
 struct Token {
     enum Type {
         NUMBER,                 // 0-9
+        CHAR,                   // character
         PLUS,                   // +
         MINUS,                  // -
         ASTERISK,               // *
@@ -71,6 +72,8 @@ struct Token {
         switch(type) {
             case NUMBER:
                 return "NUMBER: " + value;
+            case CHAR:
+                return "CHAR: " + value;
             case PLUS:
                 return "PLUS";
             case MINUS:

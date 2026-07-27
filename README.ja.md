@@ -51,6 +51,7 @@ AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
 MulDivMod          ::= Unary ( ( "*" | "/" | "%" ) Unary )*
 Unary              ::= ( "!" | "~" | "-" ) Unary | Primary
 Primary            ::= Number 
+                             | Character
                              | FunctionCall
                              | Identifier 
                              | "(" Expression ")" 
@@ -58,6 +59,7 @@ Primary            ::= Number
                              | IfExpression 
                              | WhileExpression
 
+Character          ::= "'" ( [^'\] | "\" ( "n" | "t" | "r" | "0" | "\" | "'" ) ) "'"
 FunctionCall       ::= Identifier "(" [ ArgumentList ] ")"
 ArgumentList       ::= Expression ( "," Expression )*
 Block              ::= "{" Statement* "}"
@@ -119,6 +121,8 @@ Number             ::= [0-9]+
     *   `&&`（論理積）および `||`（論理和）は短絡評価を行います。
     *   `&&` は左辺が偽 (`0`) の場合、右辺を評価せずに `0` を返します。
     *   `||` は左辺が真 (非`0`) の場合、右辺を評価せずに `1` を返します。
+*   **文字リテラル**: `'<文字>'`
+    *   シングルクォートで囲まれた1文字は、符号なし8ビット整数型（`u8`）として評価されます。`\n`（改行）、`\t`（タブ）、`\r`（キャリッジリターン）、`\0`（ヌル文字）、`\\`（バックスラッシュ）、`\'`（シングルクォート）などのエスケープシーケンスに対応しています。
 *   **意味解析（検証規則）**:
     *   **二重宣言の禁止**: 同一スコープ内で同名の変数を複数回宣言することはできません。
     *   **未定義変数の使用禁止**: 宣言されていない変数を使用したり代入したりすることはできません。
@@ -239,3 +243,15 @@ fn main() -> i64 {
     sum;           // 評価値: 15
 }
 ```
+
+### 文字リテラル (Character Literals)
+```rust
+fn main() -> i8 {
+    let c: u8;
+    c = 'A';       // 'A' は u8 型の整数値 65 として評価されます
+    let nl: u8;
+    nl = '\n';     // エスケープ文字に対応、10 として評価されます
+    c + 1;         // 評価値: 66 (文字 'B' のアスキーコード)
+}
+```
+

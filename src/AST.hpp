@@ -15,6 +15,7 @@ struct ASTNode {
         NODE_FUNCTION_DEFINITION,
         NODE_FUNCTION_CALL,
         NODE_INTEGER,
+        NODE_CHAR_LITERAL,
         NODE_BLOCK,
         NODE_UNARY_OP,
         NODE_BINARY_OP,
@@ -67,6 +68,12 @@ struct NumberNode : public ASTNode {
     int64_t value;
 
     explicit NumberNode(int64_t value) : ASTNode(Kind::NODE_INTEGER), value(value){}
+};
+
+struct CharLiteralNode : public ASTNode {
+    int64_t value;
+
+    explicit CharLiteralNode(int64_t value) : ASTNode(Kind::NODE_CHAR_LITERAL), value(value){}
 };
 
 struct BlockNode : public ASTNode {

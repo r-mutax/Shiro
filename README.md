@@ -51,6 +51,7 @@ AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
 MulDivMod          ::= Unary ( ( "*" | "/" | "%" ) Unary )*
 Unary              ::= ( "!" | "~" | "-" ) Unary | Primary
 Primary            ::= Number 
+                             | Character
                              | FunctionCall
                              | Identifier 
                              | "(" Expression ")" 
@@ -58,6 +59,7 @@ Primary            ::= Number
                              | IfExpression 
                              | WhileExpression
 
+Character          ::= "'" ( [^'\] | "\" ( "n" | "t" | "r" | "0" | "\" | "'" ) ) "'"
 FunctionCall       ::= Identifier "(" [ ArgumentList ] ")"
 ArgumentList       ::= Expression ( "," Expression )*
 Block              ::= "{" Statement* "}"
@@ -117,6 +119,8 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Repeatedly executes `expr` as long as `condition` evaluates to non-zero (true). The `while` expression evaluates to the value of the last loop body iteration (or `0` if the loop never ran).
 *   **Short-circuit Evaluation (Logical Operations)**:
     *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation.
+*   **Character Literals**: `'<character>'`
+    *   Single characters wrapped in single quotes are parsed as unsigned 8-bit integers (`u8`). Supports escape sequences like `\n` (newline), `\t` (tab), `\r` (carriage return), `\0` (null byte), `\\` (backslash), and `\'` (single quote).
 *   **Semantic Validation Rules**:
     *   **No Duplicate Declarations**: You cannot declare variables with the same name in the same scope.
     *   **No Undeclared Variable Usage**: You cannot read from or assign to a variable before it is declared.
@@ -235,5 +239,15 @@ fn main() -> i64 {
         x = x + 1;
     }                // Computes the sum from 1 to 5
     sum;             // Evaluates to 15
+}
+
+### Character Literals
+```rust
+fn main() -> i8 {
+    let c: u8;
+    c = 'A';         // 'A' is evaluated as u8 integer 65
+    let nl: u8;
+    nl = '\n';       // Escapes are supported, evaluated as 10
+    c + 1;           // Evaluates to 66 (ASCII code for 'B')
 }
 ```
