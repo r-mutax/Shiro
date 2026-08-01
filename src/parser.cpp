@@ -17,6 +17,9 @@ ASTNode* Parser::parseDefinition() {
     if (stream.peek().type == Token::FN) {
         return parseFunctionDefinition();
     }
+    if (stream.peek().type == Token::STRUCT) {
+        return parseStructDefinition();
+    }
 
     // cannnot find fn error
     error(stream.peek().loc, "Expected function definition.");
@@ -69,6 +72,55 @@ ASTNode* Parser::parseFunctionDefinition() {
                                    static_cast<BlockNode*>(block), ty_tok.loc);
     fn->loc = fname.loc;
     return fn;
+}
+
+ASTNode* Parser::parseStructDefinition(){
+    expect(Token::STRUCT, "Expected struct keyword for struct definition.");
+    Token sname = stream.next();
+    if (sname.type != Token::IDENT) {
+        error(sname.loc, "Expected IDENT after struct, but got " + sname.value);
+    }
+
+    expect(Token::LBRACE, "Expected '{' after struct name.");
+
+    std::vector<ASTNode*> members;
+    while (!stream.consume(Token::RBRACE)) {
+        if (!members.empty()) {
+            expect(Token::COMMA, "Expected ',' before next member.");
+        }
+
+        bool is_pub = stream.consume(Token::PUB);
+
+        if(stream.peek().type == Token::FN){
+            // function field 
+            ASTNode* node = parseFunctionDefinition();
+            FunctionDefinitionNode* fn = static_cast<FunctionDefinitionNode*>(node);
+            fn->is_pub = is_pub;
+            members.push_back(fn);
+        } else {
+            // variable field
+            if(stream.peek().type != Token::IDENT) {
+                error(stream.peek().loc, "Expected IDENT for struct member.");
+            }
+
+            Token token = stream.next();
+            expect(Token::COLON, "Expected ':' after struct member name.");
+
+            Token type_tok = stream.next();
+            if(!type_tok.isTypeCandidate()) {
+                error(type_tok.loc, "Expected type after struct member name.");
+            }
+            std::string type_name = type_tok.value;
+            
+            auto vd = new VariableDeclareNode(token.value, type_tok.loc, type_name);
+            vd->loc = token.loc;
+            vd->is_pub = is_pub;
+            members.push_back(vd);
+        }
+    }
+    expect(Token::SEMICOLON, "Expected ';' after struct definition.");
+    
+    return new StructDefinitionNode(sname.value, members); 
 }
 
 ASTNode* Parser::parseStatement() {

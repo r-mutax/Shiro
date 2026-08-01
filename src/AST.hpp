@@ -2,17 +2,68 @@
 #define SHIRO_AST_HPP
 
 #include "token.hpp"
+#include <unordered_map>
+
+struct Scope;
 
 struct Type {
     std::string name;
     int size;
     bool isUnsigned;
+    Scope* scope;
+    int align;
+};
+
+struct Symbol {
+    enum Kind { VARIABLE, FUNCTION, TYPE } kind;
+    std::string name;
+    int id;
+    const Type* type_info = nullptr;
+    std::vector<Symbol*> params;
+    int offset = 0;
+
+    Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
+};
+
+struct Scope {
+    std::unordered_map<std::string, Symbol> symbols;
+    Scope* parent = nullptr;
+
+    // find symbols in this scope
+    const Symbol* find(const std::string& name) const {
+        auto it = symbols.find(name);
+        if (it != symbols.end()) {
+            return &it->second;
+        }
+        return nullptr;
+    }
+
+    // find symbols in this scope or parent
+    const Symbol* find_recursive(const std::string& name) const {
+        auto it = symbols.find(name);
+        if (it != symbols.end()) {
+            return &it->second;
+        }
+        if (parent != nullptr) {
+            return parent->find_recursive(name);
+        }
+        return nullptr;
+    }
+
+    Symbol* declare(Symbol::Kind kind, const std::string& name) {
+        if (find(name) != nullptr) {
+            return nullptr;
+        }
+        symbols.emplace(name, Symbol{kind, name});
+        return &symbols.at(name);
+    }
 };
 
 struct ASTNode {
     enum Kind {
         NODE_TRANSLATION_UNIT,
         NODE_FUNCTION_DEFINITION,
+        NODE_STRUCT_DEFINITION,
         NODE_FUNCTION_CALL,
         NODE_INTEGER,
         NODE_CHAR_LITERAL,
@@ -93,6 +144,7 @@ struct VariableDeclareNode : public ASTNode {
     std::string type_name;
     SourceLoc type_loc;
     int symbol_id = -1;
+    bool is_pub = false;
 
     explicit VariableDeclareNode(const std::string& n, SourceLoc type_loc,
                                  const std::string& t = "i64")
@@ -142,12 +194,21 @@ struct ReturnNode : public ASTNode {
         : ASTNode(Kind::NODE_RETURN), expr(expr){};
 };
 
+struct StructDefinitionNode : public ASTNode {
+    std::string strct_name;
+    std::vector<ASTNode*> members;
+
+    explicit StructDefinitionNode(std::string strct_name, std::vector<ASTNode*> members)
+        : ASTNode(Kind::NODE_STRUCT_DEFINITION), strct_name(strct_name), members(members){};
+};
+
 struct FunctionDefinitionNode : public ASTNode {
     std::string fn_name;
     std::string type_name;
     std::vector<ASTNode*> params;
     BlockNode* body;
     SourceLoc type_loc;
+    bool is_pub = false;
 
     explicit FunctionDefinitionNode(std::string fn_name, std::string type_name,
                                     std::vector<ASTNode*> params,

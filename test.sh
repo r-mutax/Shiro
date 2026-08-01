@@ -157,6 +157,7 @@ assert "fn square(x: i32) -> i32 { x * x; } fn main() -> i8 { square(5); }" 25
 assert "fn sum6(a: i8, b: i8, c: i8, d: i8, e: i8, f: i8) -> i8 { a + b + c + d + e + f; } fn main() -> i8 { sum6(1, 2, 3, 4, 5, 6); }" 21
 assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main() -> i8 { fact(5); }" 120
 assert "fn test() -> i8 {10;} fn main() -> i8 { if(1){ return 10; } else { return test(); } 1; }" 10
+assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {42;}" 42
 
 # --- Character Literals ---
 assert "fn main() -> i8 { 'A'; }" 65

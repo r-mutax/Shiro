@@ -22,5 +22,7 @@ static KEYWORD_MAP keyword_map[] = {
     {"unknown", Token::UNKNOWN},
     {"fn",      Token::FN},
     {"return",  Token::RETURN},
+    {"struct",  Token::STRUCT},
+    {"pub",     Token::PUB},
 };
 // clang-format on

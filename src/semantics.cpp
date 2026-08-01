@@ -81,6 +81,58 @@ bool Semantics::checkNode(ASTNode* node) {
                 return false;
             return true;
         }
+        case ASTNode::NODE_STRUCT_DEFINITION:{
+            auto* strct = static_cast<StructDefinitionNode*>(node);
+            
+            if(current_scope->find(strct->strct_name) != nullptr){
+                error(strct->loc, "Struct '{}' is already declared", strct->strct_name);
+            }
+            
+            // Temporarily declare type symbol so that it can be used inside the struct
+            const Type* strct_type = make_struct(strct->strct_name, nullptr);
+            Symbol* strct_sym = declare_type(strct->strct_name, strct_type);
+            
+            scopeIn();
+            auto* mutable_type = const_cast<Type*>(strct_type);
+            mutable_type->scope = current_scope;
+            
+            int max_align = 1;
+            int offset = 0;
+
+            for(auto& it : strct->members){
+                if(!checkNode(it)) return false;
+
+                if(it->kind == ASTNode::NODE_FUNCTION_DEFINITION){
+                    // method
+                    auto* fd = static_cast<FunctionDefinitionNode*>(it);
+                    
+                } else if(it->kind == ASTNode::NODE_VARIABLE_DECLARE){
+                    // field
+                    auto* vd = static_cast<VariableDeclareNode*>(it);
+                    
+                    const Symbol* sym = strct_type->scope->find(vd->name);
+                    Symbol* mutable_sym = const_cast<Symbol*>(sym);
+
+                    int align = mutable_sym->type_info->align;
+                    max_align = std::max(align, max_align);
+
+                    offset = (offset + align - 1) & ~(align - 1);
+
+                    mutable_sym->offset = offset;
+                    offset += mutable_sym->type_info->size;
+                } else {
+                    error(it->loc, "Invalid member of struct '{}'", strct->strct_name);
+                }
+            }
+            scopeOut();
+
+            int total_size = (offset + max_align - 1) & ~(max_align - 1);
+            mutable_type->size = total_size;
+            mutable_type->align = max_align;
+
+            strct->evaluated_type = mutable_type;
+            return true;
+        }
         case ASTNode::NODE_FUNCTION_CALL: {
             auto* fc = static_cast<FunctionCallNode*>(node);
 
@@ -385,6 +437,18 @@ const Type* Semantics::make_primitive(const std::string& name, int size,
     Type t;
     t.name = name;
     t.size = size;
+    t.align = size;
     t.isUnsigned = isUnsigned;
+    t.scope = nullptr;
+    return alloc_type(t);
+}
+
+const Type* Semantics::make_struct(const std::string& name, const Scope* cs){
+    Type t;
+    t.name = name;
+    t.size = 0;
+    t.align = 0;
+    t.isUnsigned = false;
+    t.scope = const_cast<Scope*>(cs);
     return alloc_type(t);
 }

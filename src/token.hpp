@@ -50,6 +50,8 @@ struct Token {
         RETURN,      // return
         UNKNOWN,     // unknown
         FN,          // fn
+        STRUCT,      // struct
+        PUB,         // pub
         I8,          // i8
         I16,         // i16
         I32,         // i32
@@ -144,6 +146,10 @@ struct Token {
                 return "return";
             case FN:
                 return "fn";
+            case STRUCT:
+                return "struct";
+            case PUB:
+                return "pub";
             case I8:
                 return "i8";
             case I16:

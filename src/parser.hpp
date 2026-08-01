@@ -14,6 +14,7 @@ class Parser {
     ASTNode* parseProgram();
     ASTNode* parseDefinition();
     ASTNode* parseFunctionDefinition();
+    ASTNode* parseStructDefinition();
     ASTNode* parseStatement();
     ASTNode* parseVariableDeclare();
     ASTNode* parseReturnStatement();

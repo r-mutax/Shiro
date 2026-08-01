@@ -10,8 +10,10 @@ bool IRGenerator::generate(ASTNode* ast) {
 
     TranslationUnitNode* tu = static_cast<TranslationUnitNode*>(ast);
     for (auto& def : tu->definitions) {
-        IRFunction func = gen_function(def);
-        program.functions.push_back(std::move(func));
+        if(def->kind == ASTNode::NODE_FUNCTION_DEFINITION){
+            IRFunction func = gen_function(def);
+            program.functions.push_back(std::move(func));
+        }
     }
 
     return true;
@@ -105,7 +107,9 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
         Operand temp_val = Operand::Temp(next_temp++, vd->evaluated_type);
         symid_to_temp[vd->symbol_id] = temp_val;
-        emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
+        if(vd->evaluated_type->scope == nullptr){
+            emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
+        }
         return temp_val;
     } else if (node->kind == ASTNode::NODE_RETURN) {
         ReturnNode* ret_node = static_cast<ReturnNode*>(node);

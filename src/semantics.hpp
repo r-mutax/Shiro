@@ -5,54 +5,9 @@
 #include "error_reporter.hpp"
 #include <format>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 struct SemanticsError {};
-
-struct Symbol {
-    enum Kind { VARIABLE, FUNCTION, TYPE } kind;
-    std::string name;
-    int id;
-    const Type* type_info = nullptr;
-    std::vector<Symbol*> params;
-
-    Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
-};
-
-struct Scope {
-    std::unordered_map<std::string, Symbol> symbols;
-    Scope* parent = nullptr;
-
-    // find symbols in this scope
-    const Symbol* find(const std::string& name) const {
-        auto it = symbols.find(name);
-        if (it != symbols.end()) {
-            return &it->second;
-        }
-        return nullptr;
-    }
-
-    // find symbols in this scope or parent
-    const Symbol* find_recursive(const std::string& name) const {
-        auto it = symbols.find(name);
-        if (it != symbols.end()) {
-            return &it->second;
-        }
-        if (parent != nullptr) {
-            return parent->find_recursive(name);
-        }
-        return nullptr;
-    }
-
-    Symbol* declare(Symbol::Kind kind, const std::string& name) {
-        if (find(name) != nullptr) {
-            return nullptr;
-        }
-        symbols.emplace(name, Symbol{kind, name});
-        return &symbols.at(name);
-    }
-};
 
 class Semantics {
     ErrorReporter& reporter;
@@ -115,6 +70,7 @@ class Semantics {
     const Type* alloc_type(Type t);
     const Type* make_primitive(const std::string& name, int size,
                                bool isUnsigned);
+    const Type* make_struct(const std::string& name, const Scope* cs);
     void init_builtins();
 
     const Type* i8_t = nullptr;

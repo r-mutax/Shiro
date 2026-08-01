@@ -10,7 +10,9 @@
 
 struct OperandType {
     int bytes;
+    int align = 1;
     bool isUnsigned = false;
+    bool force_spill = false;
 };
 
 struct Operand {
@@ -32,7 +34,9 @@ struct Operand {
             return OperandType{8, false};
         }
 
-        return OperandType{type->size, type->isUnsigned};
+        return OperandType{.bytes = type->size, .align = type->align,
+                           .isUnsigned = type->isUnsigned,
+                           .force_spill = (type->scope != nullptr)};
     }
 
     static Operand Temp(int id, const Type* type) {
