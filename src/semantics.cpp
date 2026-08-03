@@ -90,7 +90,7 @@ bool Semantics::checkNode(ASTNode* node) {
             
             // Temporarily declare type symbol so that it can be used inside the struct
             const Type* strct_type = make_struct(strct->strct_name, nullptr);
-            Symbol* strct_sym = declare_type(strct->strct_name, strct_type);
+            declare_type(strct->strct_name, strct_type);
             
             scopeIn();
             auto* mutable_type = const_cast<Type*>(strct_type);
@@ -104,7 +104,7 @@ bool Semantics::checkNode(ASTNode* node) {
 
                 if(it->kind == ASTNode::NODE_FUNCTION_DEFINITION){
                     // method
-                    auto* fd = static_cast<FunctionDefinitionNode*>(it);
+                    // auto* fd = static_cast<FunctionDefinitionNode*>(it);
                     
                 } else if(it->kind == ASTNode::NODE_VARIABLE_DECLARE){
                     // field
@@ -213,6 +213,26 @@ bool Semantics::checkNode(ASTNode* node) {
             vd->evaluated_type = sym->type_info;
             return true;
         }
+        case ASTNode::NODE_MEMBER_ACCESS: {
+            auto* ma = static_cast<MemberAccessNode*>(node);
+            if (!checkNode(ma->struct_expr)) return false;
+
+            const Type* type = ma->struct_expr->evaluated_type;
+            if (!type->isStruct()) {
+                error(ma->struct_expr->loc, "Not a struct");
+                return false;
+            }
+            
+            const Symbol* sym = type->scope->find(ma->member_name);
+            if (sym == nullptr) {
+                error(ma->loc, "Member '{}' not found", ma->member_name);
+                return false;
+            }
+            
+            ma->evaluated_type = sym->type_info;
+            ma->offset = sym->offset;
+            return true;
+        }
         case ASTNode::NODE_RETURN: {
             auto* rs = static_cast<ReturnNode*>(node);
 
@@ -301,38 +321,47 @@ bool Semantics::checkNode(ASTNode* node) {
         case ASTNode::NODE_ASSIGNMENT: {
             auto* as = static_cast<AssignmentNode*>(node);
 
-            if (as->lvalue->kind != ASTNode::NODE_VARIABLE) {
-                error(as->lvalue->loc,
-                      "Left value of assignment is not a variable");
+            const Type* lvalue_type = nullptr;
+
+            if(as->lvalue->kind == ASTNode::NODE_VARIABLE){
+                auto* var_node = static_cast<VariableNode*>(as->lvalue);
+                auto* sym =
+                    (Symbol*)(current_scope->find_recursive(var_node->name));
+                if (sym == nullptr) {
+                    error(var_node->loc, "Variable '{}' is not declared",
+                          var_node->name);
+                }
+                if (!checkNode(as->expr))
+                    return false;
+                if (sym->type_info->name == "unknown") {
+                    sym->type_info = as->expr->evaluated_type;
+                } else if (isAutoCastInteger(as->expr)) {
+                    as->expr->evaluated_type = sym->type_info;
+                }
+                var_node->evaluated_type = sym->type_info;
+                var_node->symbol_id = sym->id;
+                lvalue_type = sym->type_info;
+            } else if(as->lvalue->kind == ASTNode::NODE_MEMBER_ACCESS){
+                if(!checkNode(as->lvalue)) return false;
+                if(!checkNode(as->expr)) return false;
+
+                lvalue_type = as->lvalue->evaluated_type;
+
+                if(isAutoCastInteger(as->expr)){
+                    as->expr->evaluated_type = lvalue_type;
+                }
+            } else {
+                error(as->lvalue->loc, 
+                    "Left value of assignment is not a variable.");
             }
 
-            auto* var_node = static_cast<VariableNode*>(as->lvalue);
-            auto* sym =
-                (Symbol*)(current_scope->find_recursive(var_node->name));
-            if (sym == nullptr) {
-                error(var_node->loc, "Variable '{}' is not declared",
-                      var_node->name);
-            }
-
-            if (!checkNode(as->expr))
-                return false;
-
-            if (sym->type_info->name == "unknown") {
-                sym->type_info = as->expr->evaluated_type;
-            } else if (isAutoCastInteger(as->expr)) {
-                as->expr->evaluated_type = sym->type_info;
-            }
-
-            var_node->symbol_id = sym->id;
-            var_node->evaluated_type = sym->type_info;
-
-            if (as->lvalue->evaluated_type != as->expr->evaluated_type) {
+            if (lvalue_type != as->expr->evaluated_type) {
                 error(as->loc,
                       "Type mismatch in assignment. Left: '{}', Right: '{}'",
-                      as->lvalue->evaluated_type->name,
+                      lvalue_type->name,
                       as->expr->evaluated_type->name);
             }
-            as->evaluated_type = var_node->evaluated_type;
+            as->evaluated_type = lvalue_type;
             return true;
         }
         case ASTNode::NODE_IF: {

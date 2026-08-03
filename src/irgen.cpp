@@ -77,6 +77,12 @@ IRFunction IRGenerator::gen_function(ASTNode* node) {
         update_interval(instr.dst);
         update_interval(instr.src1);
         update_interval(instr.src2);
+
+        if(instr.op == IRInstruction::ADDR){
+            if(instr.src1.kind == Operand::TEMP){
+                func.temp_reg_infos[instr.src1.temp_id].type.force_spill = true;
+            }
+        }
     }
 
     for (const auto& bb : func.blocks) {
@@ -107,7 +113,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
         Operand temp_val = Operand::Temp(next_temp++, vd->evaluated_type);
         symid_to_temp[vd->symbol_id] = temp_val;
-        if(vd->evaluated_type->scope == nullptr){
+        if(!vd->evaluated_type->isStruct()){
             emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
         }
         return temp_val;
@@ -125,10 +131,10 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
 Operand IRGenerator::gen_expr(ASTNode* node) {
     if (node->kind == ASTNode::NODE_INTEGER) {
         NumberNode* num = static_cast<NumberNode*>(node);
-        return Operand::IntVal(num->value);
+        return Operand::IntVal(num->value, node->evaluated_type);
     } else if (node->kind == ASTNode::NODE_CHAR_LITERAL) {
         CharLiteralNode* ch = static_cast<CharLiteralNode*>(node);
-        return Operand::IntVal(ch->value);
+        return Operand::IntVal(ch->value, node->evaluated_type);
     } else if (node->kind == ASTNode::NODE_VARIABLE) {
         VariableNode* v = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(v->symbol_id);
@@ -203,17 +209,30 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
         return res_temp;
     } else if (node->kind == ASTNode::NODE_ASSIGNMENT) {
         AssignmentNode* as = static_cast<AssignmentNode*>(node);
-        VariableNode* var = static_cast<VariableNode*>(as->lvalue);
-
         Operand value = gen_expr(as->expr);
-        auto it = symid_to_temp.find(var->symbol_id);
 
-        if (it == symid_to_temp.end()) {
-            fatal("IRGen Error: variable'" + var->name +
-                  "'not found in symbol map");
+        if(as->lvalue->kind == ASTNode::NODE_VARIABLE){
+            VariableNode* var = static_cast<VariableNode*>(as->lvalue);
+            auto it = symid_to_temp.find(var->symbol_id);
+            if (it == symid_to_temp.end()) {
+                fatal("IRGen Error: variable'" + var->name +
+                    "'not found in symbol map");
+            }
+            emit_mov(it->second, value);
+            return value;
+        } else {
+            // assign to struct and so on...
+            Operand addr = gen_lval(as->lvalue);
+            emit_store(value, addr);
+            return value;
         }
-        emit_mov(it->second, value);
-        return value;
+    } else if (node->kind == ASTNode::NODE_MEMBER_ACCESS) {
+        MemberAccessNode* ma = static_cast<MemberAccessNode*>(node);
+
+        Operand addr = gen_lval(ma);
+        Operand val = Operand::Temp(next_temp++, ma->evaluated_type);
+        emit_load(addr, val);
+        return val;
     } else if (node->kind == ASTNode::NODE_UNARY_OP) {
         UnaryOpNode* un_op = static_cast<UnaryOpNode*>(node);
         Operand res_temp = Operand::Temp(next_temp++, un_op->evaluated_type);
@@ -329,6 +348,33 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
     }
 
     fatal("Expected expression");
+}
+
+Operand IRGenerator::gen_lval(ASTNode* node){
+    if(node->kind == ASTNode::NODE_VARIABLE){
+        VariableNode* var = static_cast<VariableNode*>(node);
+        auto it = symid_to_temp.find(var->symbol_id);
+        if (it == symid_to_temp.end()) {
+            fatal("IRGen Error: variable'" + var->name +
+                  "'not found in symbol map");
+        }
+        Operand var_op = it->second;
+
+        Operand addr = Operand::Addr(next_temp++);
+        emit_addr(var_op, addr);
+        return addr;
+    } else if(node->kind == ASTNode::NODE_MEMBER_ACCESS){
+        MemberAccessNode* ma = static_cast<MemberAccessNode*>(node);
+        Operand base_addr = gen_lval(ma->struct_expr);
+
+        if(ma->offset > 0){
+            Operand member_addr = Operand::Addr(next_temp++);
+            emit_add(member_addr, base_addr, Operand::IntVal((ma->offset)));
+            return member_addr;
+        }
+        return base_addr;
+    }
+    fatal("Expected lvalue");
 }
 
 void IRGenerator::dump() {

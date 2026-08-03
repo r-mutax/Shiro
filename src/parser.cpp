@@ -330,7 +330,27 @@ ASTNode* Parser::parseUnary() {
         unary->loc = tok.loc;
         return unary;
     }
-    return parsePrimary();
+    return parsePostfix();
+}
+
+ASTNode* Parser::parsePostfix(){
+    ASTNode* lhs = parsePrimary();
+
+    while (true) {
+        Token tok = stream.peek();
+        if (tok.type == Token::DOT) {
+            stream.next();
+            Token member = stream.next();
+            if (member.type != Token::IDENT) {
+                error(member.loc, "Expected IDENT after '.', but got " + member.value);
+            }
+            lhs = new MemberAccessNode(lhs, member.value);
+            lhs->loc = tok.loc;
+        } else {
+            break;
+        }
+    }
+    return lhs;
 }
 
 ASTNode* Parser::parsePrimary() {

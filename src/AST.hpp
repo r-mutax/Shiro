@@ -12,6 +12,10 @@ struct Type {
     bool isUnsigned;
     Scope* scope;
     int align;
+
+    bool isStruct() const {
+        return scope != nullptr;
+    }
 };
 
 struct Symbol {
@@ -77,6 +81,7 @@ struct ASTNode {
         NODE_IF,
         NODE_WHILE,
         NODE_RETURN,
+        NODE_MEMBER_ACCESS,
     };
 
     Kind kind;
@@ -158,6 +163,15 @@ struct VariableNode : public ASTNode {
 
     explicit VariableNode(std::string n)
         : ASTNode(Kind::NODE_VARIABLE), name(n){};
+};
+
+struct MemberAccessNode : public ASTNode {
+    ASTNode* struct_expr;
+    std::string member_name;
+    int offset = 0;
+
+    explicit MemberAccessNode(ASTNode* struct_expr, std::string member_name)
+        : ASTNode(Kind::NODE_MEMBER_ACCESS), struct_expr(struct_expr), member_name(member_name){};
 };
 
 struct FunctionCallNode : public ASTNode {

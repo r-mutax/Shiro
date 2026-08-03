@@ -622,6 +622,76 @@ void X86Generator::gen_instruction(const IRInstruction& instr,
             out << src1 << ":" << std::endl;
             break;
         }
+        case IRInstruction::Op::ADDR: {
+            std::string dst = activateDst(instr.dst, regalloc_state);
+            int offset = regalloc_state.temp_to_stack_offset[instr.src1.temp_id];
+
+            out << "  lea " << dst << ", [rbp - " << offset << "]" << std::endl;
+            deactivateDst(instr.dst, regalloc_state);
+            break;
+        }
+        case IRInstruction::Op::LOAD: {
+            std::string src1 = activateSrc1(instr.src1, regalloc_state);
+            std::string dst = activateDst(instr.dst, regalloc_state);
+            if (instr.dst.type.isUnsigned) {
+                switch (instr.dst.type.bytes) {
+                    case 1:
+                        out << "  movzx " << dst << ", BYTE PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 2:
+                        out << "  movzx " << dst << ", WORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 4:
+                        out << "  mov " << regalloc_state.get_reg_32(dst) << ", DWORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 8:
+                        out << "  mov " << dst << ", QWORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                }
+            } else {
+                switch (instr.dst.type.bytes) {
+                    case 1:
+                        out << "  movsx " << dst << ", BYTE PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 2:
+                        out << "  movsx " << dst << ", WORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 4:
+                        out << "  movsxd " << dst << ", DWORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                    case 8:
+                        out << "  mov " << dst << ", QWORD PTR [" << src1 << "]" << std::endl;
+                        break;
+                }
+            }
+            deactivateDst(instr.dst, regalloc_state);
+            break;
+        }
+        case IRInstruction::Op::STORE: {
+            std::string addr = activateSrc1(instr.dst, regalloc_state);
+            std::string val = activateSrc2(instr.src1, regalloc_state);
+
+            std::string size_ptr = "";
+            switch (instr.src1.type.bytes) {
+                case 1: size_ptr = "BYTE PTR"; break;
+                case 2: size_ptr = "WORD PTR"; break;
+                case 4: size_ptr = "DWORD PTR"; break;
+                case 8: size_ptr = "QWORD PTR"; break;
+                default: fatal("Unsupported size for STORE");
+            }
+
+            std::string val_reg = val;
+            if (instr.src1.kind == Operand::TEMP) {
+                switch (instr.src1.type.bytes) {
+                    case 1: val_reg = regalloc_state.get_reg_8(val); break;
+                    case 2: val_reg = regalloc_state.get_reg_16(val); break;
+                    case 4: val_reg = regalloc_state.get_reg_32(val); break;
+                    case 8: break;
+                }
+            }
+            out << "  mov " << size_ptr << " [" << addr << "], " << val_reg << std::endl;
+            break;
+        }
         default:
             fatal("Unknown instruction");
     }

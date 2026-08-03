@@ -48,6 +48,10 @@ struct Operand {
         return Operand{.kind = TEMP, .temp_id = id, .type = optype};
     }
 
+    static Operand Addr(int id){
+        return Temp(id, OperandType{8, 8});
+    }
+
     // type is nullable, i64 is default
     static Operand IntVal(int64_t imm, const Type* type = nullptr) {
         return Operand{
@@ -118,6 +122,9 @@ struct IRInstruction {
         JNZ,    // jump if src1 is not zero then jmp label(dst)
         JMP,    // jump anyware to label(dst)
         LABEL,  // label src1
+        LOAD,   // load from address(src1) to dst
+        STORE,  // store from src2 to address(dst)
+        ADDR,   // get address of src1 to dst
     } op;
 
     Operand dst;
@@ -190,6 +197,12 @@ struct IRInstruction {
                 return "JMP " + src1.to_str();
             case LABEL:
                 return "LABEL " + src1.to_str();
+            case LOAD:
+                return "LOAD " + dst.to_str() + ", " + src1.to_str();
+            case STORE:
+                return "STORE " + dst.to_str() + ", " + src1.to_str();
+            case ADDR:
+                return "ADDR " + dst.to_str() + ", " + src1.to_str();
         }
         return "UNKNOWN";
     }
@@ -367,9 +380,22 @@ class IRGenerator {
         emit(IRInstruction::LABEL, Operand::IntVal(0), label);
     }
 
+    void emit_load(Operand src, Operand dst) {
+        emit(IRInstruction::LOAD, dst, src);
+    }
+
+    void emit_store(Operand src, Operand dst) {
+        emit(IRInstruction::STORE, dst, src);
+    }
+
+    void emit_addr(Operand src, Operand dst) {
+        emit(IRInstruction::ADDR, dst, src);
+    }
+
     IRFunction gen_function(ASTNode* node);
     Operand gen_stmt(ASTNode* node);
     Operand gen_expr(ASTNode* node);
+    Operand gen_lval(ASTNode* node);
 
     template <typename... Args>
     [[noreturn]] void error(SourceLoc loc, std::string_view fmt,

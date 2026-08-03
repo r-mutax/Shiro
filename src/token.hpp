@@ -43,6 +43,7 @@ struct Token {
         CHILDA,      // ~
         ARROW,       // ->
         COMMA,       // ,
+        DOT,         // .
         LET,         // let
         IF,          // if
         WHILE,       // while
@@ -134,6 +135,8 @@ struct Token {
                 return "CHILDA";
             case COMMA:
                 return "COMMA";
+            case DOT:
+                return "DOT";
             case LET:
                 return "LET";
             case IF:

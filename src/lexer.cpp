@@ -198,6 +198,10 @@ TokenStream Lexer::lex_src(std::string_view src) {
                 create_token(Token::COMMA, i, ",");
                 break;
             }
+            case '.': {
+                create_token(Token::DOT, i, ".");
+                break;
+            }
             case '!': {
                 if (i + 1 < len && src[i + 1] == '=') {
                     create_token(Token::NOT_EQUAL, i, "!=");
