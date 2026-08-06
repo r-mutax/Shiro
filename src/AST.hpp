@@ -13,8 +13,15 @@ struct Type {
     Scope* scope;
     int align;
 
+    const Type* base_type = nullptr;
+    mutable const Type* ref_type = nullptr;
+
     bool isStruct() const {
         return scope != nullptr;
+    }
+    
+    bool isReference() const {
+        return base_type != nullptr;
     }
 };
 

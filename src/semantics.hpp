@@ -3,6 +3,7 @@
 
 #include "AST.hpp"
 #include "error_reporter.hpp"
+#include "token.hpp"
 #include <format>
 #include <memory>
 #include <vector>
@@ -21,6 +22,8 @@ class Semantics {
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
 
     bool checkNode(ASTNode* node);
+
+    bool isCompatibleType(const Type* t1, const Type* t2);
 
     void scopeIn() {
         auto scope = std::make_unique<Scope>();
@@ -67,10 +70,12 @@ class Semantics {
         return symbol;
     }
 
+    const Type* resolveType(std::string_view type_name, SourceLoc loc);
     const Type* alloc_type(Type t);
     const Type* make_primitive(const std::string& name, int size,
                                bool isUnsigned);
     const Type* make_struct(const std::string& name, const Scope* cs);
+    const Type* make_reference(const Type* t);
     void init_builtins();
 
     const Type* i8_t = nullptr;

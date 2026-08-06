@@ -37,7 +37,10 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction& func) {
                 regalloc_state.temp_to_stack_offset[op.temp_id] != -1) {
                 return;
             }
-            if(!func.temp_reg_infos[op.temp_id].type.force_spill){
+
+            const OperandType& type = func.temp_reg_infos[op.temp_id].type;
+
+            if(!type.force_spill){
                 for (size_t i = 0; i < free_regs.size(); i++) {
                     if (free_regs[i].second == -1) {
                         free_regs[i].second = op.temp_id;
@@ -50,10 +53,10 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction& func) {
             regalloc_state.temp_to_reg[op.temp_id] = -1;
 
             regalloc_state.spill_offset = regalloc_state.align_to(
-                regalloc_state.spill_offset, op.type.align);
+                regalloc_state.spill_offset, type.align);
             regalloc_state.temp_to_stack_offset[op.temp_id] =
                 regalloc_state.spill_offset;
-            regalloc_state.spill_offset += op.type.bytes;
+            regalloc_state.spill_offset += type.bytes;
         }
     };
 

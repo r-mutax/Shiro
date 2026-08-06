@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include "AST.hpp"
+#include "token.hpp"
 
 ASTNode* Parser::parse() { return parseProgram(); }
 
@@ -25,6 +26,28 @@ ASTNode* Parser::parseDefinition() {
     error(stream.peek().loc, "Expected function definition.");
 }
 
+
+std::pair<std::string, SourceLoc> Parser::parseTypeName(){
+    std::string prefix = "";
+    SourceLoc loc = stream.peek().loc;
+    while (true) {
+        if (stream.peek().type == Token::AND) {
+            stream.next();
+            prefix += "&";
+        } else if (stream.peek().type == Token::AND_AND) {
+            stream.next();
+            prefix += "&&"; // Token::AND_AND なら & 2個分として扱う
+        } else {
+            break;
+        }
+    }
+    Token type_tok = stream.next();
+    if (!type_tok.isTypeCandidate()) {
+        error(type_tok.loc, "Expected type name, but got " + type_tok.value);
+    }
+    return {prefix + type_tok.value, loc};
+}
+
 ASTNode* Parser::parseFunctionDefinition() {
     expect(Token::FN, "Expected fn keyword for function definition.");
     Token fname = stream.next();
@@ -46,12 +69,13 @@ ASTNode* Parser::parseFunctionDefinition() {
         }
 
         std::string type_name = "unknown";
-        Token type_tok;
+        SourceLoc loc;
         if (stream.consume(Token::COLON)) {
-            type_tok = stream.next();
-            type_name = type_tok.value;
+            auto [type_name_val, type_loc] = parseTypeName();
+            type_name = type_name_val;
+            loc = type_loc;
         }
-        auto vd = new VariableDeclareNode(token.value, type_tok.loc, type_name);
+        auto vd = new VariableDeclareNode(token.value, loc, type_name);
         vd->loc = token.loc;
         params.push_back(vd);
     }
@@ -59,17 +83,13 @@ ASTNode* Parser::parseFunctionDefinition() {
     expect(Token::ARROW, "Expected '->' after function parameters.");
 
     // check token is type name candidate (keyword or IDENT)
-    Token ty_tok = stream.next();
-    if (!ty_tok.isTypeCandidate()) {
-        error(ty_tok.loc, "Expected type after ->, but got " + ty_tok.value);
-    }
-    std::string type_name = ty_tok.value;
+    auto [type_name_func, type_loc_func] = parseTypeName();
 
     ASTNode* block = parseBlock();
 
     auto fn =
-        new FunctionDefinitionNode(fname.value, type_name, params,
-                                   static_cast<BlockNode*>(block), ty_tok.loc);
+        new FunctionDefinitionNode(fname.value, type_name_func, params,
+                                   static_cast<BlockNode*>(block), type_loc_func);
     fn->loc = fname.loc;
     return fn;
 }
@@ -106,13 +126,9 @@ ASTNode* Parser::parseStructDefinition(){
             Token token = stream.next();
             expect(Token::COLON, "Expected ':' after struct member name.");
 
-            Token type_tok = stream.next();
-            if(!type_tok.isTypeCandidate()) {
-                error(type_tok.loc, "Expected type after struct member name.");
-            }
-            std::string type_name = type_tok.value;
+            auto [type_name_field, type_loc_field] = parseTypeName();
             
-            auto vd = new VariableDeclareNode(token.value, type_tok.loc, type_name);
+            auto vd = new VariableDeclareNode(token.value, type_loc_field, type_name_field);
             vd->loc = token.loc;
             vd->is_pub = is_pub;
             members.push_back(vd);
@@ -146,8 +162,9 @@ ASTNode* Parser::parseVariableDeclare() {
     std::string type_name = "unknown";
     Token type_tok;
     if (stream.consume(Token::COLON)) {
-        type_tok = stream.next();
-        type_name = type_tok.value;
+        auto [type_name_let, type_loc_let] = parseTypeName();
+        type_name = type_name_let;
+        type_tok.loc = type_loc_let;
     }
 
     expect(Token::SEMICOLON, "Expected ';' after variable declare.");
@@ -324,7 +341,7 @@ ASTNode* Parser::parseUnary() {
     Token tok = stream.peek();
 
     if (tok.type == Token::NOT || tok.type == Token::CHILDA ||
-        tok.type == Token::MINUS) {
+        tok.type == Token::MINUS || tok.type == Token::AND) {
         stream.next();
         auto unary = new UnaryOpNode(tok, parseUnary());
         unary->loc = tok.loc;

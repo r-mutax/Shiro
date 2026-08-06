@@ -36,23 +36,15 @@ bool Semantics::checkNode(ASTNode* node) {
         case ASTNode::NODE_FUNCTION_DEFINITION: {
             auto* fd = static_cast<FunctionDefinitionNode*>(node);
 
-            const Symbol* type_sym =
-                current_scope->find_recursive(fd->type_name);
-            if (type_sym == nullptr) {
-                error(fd->type_loc, "Cannot find type '{}' in this scope",
-                      fd->type_name);
-            }
-            if (type_sym->kind != Symbol::TYPE) {
-                error(fd->type_loc, "'{}' is not a type", fd->type_name);
-            }
-            Symbol* func_sym =
-                declare_function(fd->fn_name, type_sym->type_info);
+            const Type* ret_type = resolveType(fd->type_name, fd->type_loc);
+
+            Symbol* func_sym = declare_function(fd->fn_name, ret_type);
             if (func_sym == nullptr) {
                 error(fd->loc, "Function '{}' is already declared",
                       fd->fn_name);
             }
-            fd->evaluated_type = type_sym->type_info;
-            current_func_return_types.push_back(fd->evaluated_type);
+            fd->evaluated_type = ret_type;
+            current_func_return_types.push_back(ret_type);
 
             scopeIn();
 
@@ -177,23 +169,17 @@ bool Semantics::checkNode(ASTNode* node) {
         case ASTNode::NODE_VARIABLE_DECLARE: {
             auto* vd = static_cast<VariableDeclareNode*>(node);
 
-            const Symbol* type_sym =
-                current_scope->find_recursive(vd->type_name);
-            if (type_sym == nullptr) {
-                error(vd->type_loc, "Type '{}' is not declared", vd->type_name);
-            }
-            if (type_sym->kind != Symbol::TYPE) {
-                error(vd->type_loc, "'{}' is not a type", vd->type_name);
-            }
+            const Type* var_type = resolveType(vd->type_name, vd->type_loc);
+            if(var_type == nullptr) return false;
 
-            Symbol* sym = declare_variable(vd->name, type_sym->type_info);
+            Symbol* sym = declare_variable(vd->name, var_type);
             if (sym == nullptr) {
                 error(vd->loc, "Variable '{}' is already declared", vd->name);
                 return false;
             }
 
             vd->symbol_id = sym->id;
-            vd->evaluated_type = type_sym->type_info;
+            vd->evaluated_type = var_type;
             return true;
         }
         case ASTNode::NODE_VARIABLE: {
@@ -218,7 +204,11 @@ bool Semantics::checkNode(ASTNode* node) {
             if (!checkNode(ma->struct_expr)) return false;
 
             const Type* type = ma->struct_expr->evaluated_type;
-            if (!type->isStruct()) {
+            while (type && type->isReference()) {
+                type = type->base_type;
+            }
+
+            if (!type || !type->isStruct()) {
                 error(ma->struct_expr->loc, "Not a struct");
                 return false;
             }
@@ -248,7 +238,7 @@ bool Semantics::checkNode(ASTNode* node) {
                 rs->expr->evaluated_type = return_type;
             }
 
-            if (return_type != rs->expr->evaluated_type) {
+            if (!isCompatibleType(return_type, rs->expr->evaluated_type)) {
                 error(rs->loc,
                       "Return type '{}' does not match expression type '{}'",
                       return_type->name, rs->expr->evaluated_type->name);
@@ -272,6 +262,9 @@ bool Semantics::checkNode(ASTNode* node) {
 
             if (uo->op.type == Token::NOT) {
                 uo->evaluated_type = i64_t;
+            } else if(uo->op.type == Token::AND){
+                // reference
+                uo->evaluated_type = make_reference(uo->value->evaluated_type);
             } else {
                 uo->evaluated_type = uo->value->evaluated_type;
             }
@@ -355,7 +348,7 @@ bool Semantics::checkNode(ASTNode* node) {
                     "Left value of assignment is not a variable.");
             }
 
-            if (lvalue_type != as->expr->evaluated_type) {
+            if (!isCompatibleType(lvalue_type, as->expr->evaluated_type)) {
                 error(as->loc,
                       "Type mismatch in assignment. Left: '{}', Right: '{}'",
                       lvalue_type->name,
@@ -432,6 +425,43 @@ bool Semantics::checkNode(ASTNode* node) {
     return true;
 }
 
+const Type* Semantics::resolveType(std::string_view type_name, SourceLoc loc){
+    if(type_name.starts_with('&')){
+        const Type* base = resolveType(type_name.substr(1), loc);
+        if(base == nullptr) return nullptr;
+        return make_reference(base);
+    }
+
+    const Symbol* sym = current_scope->find_recursive(std::string(type_name));
+    if(sym == nullptr){
+        error(loc, "Type '{}' is not declared", type_name);
+        return nullptr;
+    }
+    if(sym->kind != Symbol::TYPE){
+        error(loc, "'{}' is not a type", type_name);
+        return nullptr;
+    }
+    return sym->type_info;
+}
+
+bool Semantics::isCompatibleType(const Type* t1, const Type* t2){
+    if(t1 == nullptr || t2 == nullptr) return false;
+
+    if(t1 == t2) return true;
+
+    Type* base1 = const_cast<Type*>(t1);
+    Type* base2 = const_cast<Type*>(t2);
+
+    while(base1 && base1->isReference()){
+        base1 = const_cast<Type*>(base1->base_type);
+    }
+    while(base2 && base2->isReference()){
+        base2 = const_cast<Type*>(base2->base_type);
+    }
+
+    return base1 == base2;
+}
+
 void Semantics::init_builtins() {
     i8_t = make_primitive("i8", 1, false);
     i16_t = make_primitive("i16", 2, false);
@@ -480,4 +510,24 @@ const Type* Semantics::make_struct(const std::string& name, const Scope* cs){
     t.isUnsigned = false;
     t.scope = const_cast<Scope*>(cs);
     return alloc_type(t);
+}
+
+const Type* Semantics::make_reference(const Type* t){
+    if(t == nullptr) return nullptr;
+
+    if(t->ref_type){
+        return t->ref_type;
+    }
+
+    Type ref;
+    ref.name = "&" + t->name;
+    ref.size = 8;
+    ref.align = 8;
+    
+    ref.isUnsigned = false;
+    ref.scope = nullptr;
+    ref.base_type = t;
+
+    t->ref_type = alloc_type(ref);
+    return t->ref_type;
 }

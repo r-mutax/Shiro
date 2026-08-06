@@ -61,6 +61,7 @@ assert() {
 
 # Run tests
 echo "Running Shiro compiler tests..."
+assert "fn main() -> i8 {let x : i8; let y; y = &x; x = 10; return y; }" 10
 assert "fn main() -> i8 {42;}" 42
 assert "fn main() -> i8 {40 + 2;}" 42
 assert "fn main() -> i8 {222 + 323;}" 33
@@ -159,6 +160,15 @@ assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main()
 assert "fn test() -> i8 {10;} fn main() -> i8 { if(1){ return 10; } else { return test(); } 1; }" 10
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {42;}" 42
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {let p : Point; p.x = 5; p.y = 10; p.x + p.y;}" 15
+
+# --- Reference Types ---
+assert "fn main() -> i8 { let x: i8; x = 42; let y; y = &x; y; }" 42
+assert "fn main() -> i8 { let a: i8; let b: i8; a = 10; b = 20; let ra; let rb; ra = &a; rb = &b; ra + rb; }" 30
+assert "fn main() -> i8 { let x: i8; x = 50; let rx; rx = &x; let rrx; rrx = &rx; rrx; }" 50
+assert "fn main() -> i8 { let x: i8; x = 10; let rx; rx = &x; let rrx; rrx = &rx; let rrrx; rrrx = &rrx; rrrx; }" 10
+assert "fn main() -> i8 { let x: i8; x = 5; let rx; rx = &x; x = 15; rx; }" 15
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp; rp = &p; rp.x + rp.y; }" 30
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp; rp = &p; rp.x = 50; p.x; }" 50
 
 # --- Character Literals ---
 assert "fn main() -> i8 { 'A'; }" 65

@@ -70,7 +70,10 @@ IRFunction IRGenerator::gen_function(ASTNode* node) {
                     func.temp_reg_infos[tid].start = i;
                 }
                 func.temp_reg_infos[tid].end = i;
+
+                bool prev_force_spill = func.temp_reg_infos[tid].type.force_spill || op.type.force_spill;
                 func.temp_reg_infos[tid].type = op.type;
+                func.temp_reg_infos[tid].type.force_spill = prev_force_spill;
             }
         };
 
@@ -142,7 +145,14 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
             fatal("IRGen Error: variable'" + v->name +
                   "'not found in symbol map");
         }
-        return it->second;
+        if(v->evaluated_type->isReference()){
+            Operand addr = it->second;
+            Operand val = Operand::Temp(next_temp++, v->evaluated_type->base_type);
+            emit_load(addr, val);
+            return val;
+        } else {
+            return it->second;
+        }
     } else if (node->kind == ASTNode::NODE_FUNCTION_CALL) {
         FunctionCallNode* fc = static_cast<FunctionCallNode*>(node);
 
@@ -212,6 +222,7 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
         Operand value = gen_expr(as->expr);
 
         if(as->lvalue->kind == ASTNode::NODE_VARIABLE){
+            Operand var_op = gen_lval(as->lvalue);
             VariableNode* var = static_cast<VariableNode*>(as->lvalue);
             auto it = symid_to_temp.find(var->symbol_id);
             if (it == symid_to_temp.end()) {
@@ -244,6 +255,8 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
             emit_neg(res_temp, value);
         } else if (un_op->op.type == Token::CHILDA) {
             emit_bnot(res_temp, value);
+        } else if(un_op->op.type == Token::AND) {
+            return gen_lval(un_op->value);
         }
         return res_temp;
     } else if (node->kind == ASTNode::NODE_BINARY_OP) {
@@ -360,12 +373,24 @@ Operand IRGenerator::gen_lval(ASTNode* node){
         }
         Operand var_op = it->second;
 
-        Operand addr = Operand::Addr(next_temp++);
-        emit_addr(var_op, addr);
-        return addr;
+        if(var->evaluated_type->isReference()){
+            return var_op;
+        } else {
+            Operand addr = Operand::Addr(next_temp++);
+            emit_addr(var_op, addr);
+            return addr;
+        }
     } else if(node->kind == ASTNode::NODE_MEMBER_ACCESS){
         MemberAccessNode* ma = static_cast<MemberAccessNode*>(node);
         Operand base_addr = gen_lval(ma->struct_expr);
+
+        const Type* struct_type = ma->struct_expr->evaluated_type;
+        while (struct_type->isReference() && struct_type->base_type->isReference()) {
+            struct_type = struct_type->base_type;
+            Operand next_addr = Operand::Addr(next_temp++);
+            emit_load(base_addr, next_addr);
+            base_addr = next_addr;
+        }
 
         if(ma->offset > 0){
             Operand member_addr = Operand::Addr(next_temp++);
