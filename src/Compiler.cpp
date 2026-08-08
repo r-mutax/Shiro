@@ -2,6 +2,7 @@
 #include "error_reporter.hpp"
 #include "irgen.hpp"
 #include "lexer.hpp"
+#include "metawriter.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
 #include "x86gen.hpp"
@@ -66,14 +67,21 @@ bool Compiler::compile_src(std::string_view src) {
             return false;
         }
 
-        IRGenerator ir_generator(reporter);
-        if (!ir_generator.generate(ast)) {
-            std::cerr << "Error: Failed to generate code" << std::endl;
-            return false;
+        if(!env.emit_meta){
+            IRGenerator ir_generator(reporter);
+            if (!ir_generator.generate(ast)) {
+                std::cerr << "Error: Failed to generate code" << std::endl;
+                return false;
+            }
+
+            X86Generator x86_generator(ir_generator.get_program(), reporter, *out);
+            x86_generator.generate();
         }
 
-        X86Generator x86_generator(ir_generator.get_program(), reporter, *out);
-        x86_generator.generate();
+        if(!env.execute){
+            MetaWriter meta_writer(reporter, env.input_filename);
+            meta_writer.write(semantics.getGlobalScope(), src);
+        }
 
     } catch (const ParseError&) {
         return false;

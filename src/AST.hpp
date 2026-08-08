@@ -32,6 +32,7 @@ struct Symbol {
     const Type* type_info = nullptr;
     std::vector<Symbol*> params;
     int offset = 0;
+    bool pub = false;
 
     Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
 };

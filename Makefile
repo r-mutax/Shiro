@@ -23,6 +23,7 @@ clean:
 test: $(TARGET)
 	bash test.sh
 	bash test_errors.sh
+	bash test_meta.sh
 
 -include $(DEPS)
 

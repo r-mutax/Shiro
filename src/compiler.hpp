@@ -10,6 +10,7 @@ struct CompilerEnvironment {
     std::string input_filename;
 
     bool execute = false;
+    bool emit_meta = false;
     std::string execute_code;
 };
 

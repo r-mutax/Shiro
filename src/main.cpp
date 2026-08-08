@@ -23,6 +23,8 @@ int main(int argc, const char* argv[]) {
                 std::cerr << "Error: -e requires an argument" << std::endl;
                 return 1;
             }
+        } else if (arg == "-M" || arg == "--emit-meta") {
+            compiler.env.emit_meta = true;
         } else {
             // input file
             compiler.env.input_filename = arg;

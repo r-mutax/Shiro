@@ -101,6 +101,7 @@ class Semantics {
     ~Semantics() = default;
 
     bool analyze(ASTNode* ast);
+    const Scope* getGlobalScope() const { return &global_scope; }
 };
 
 #endif // SHIRO_SEMANTICS_HPP
