@@ -2,12 +2,14 @@
 
 [English version (README.md)](./README.md)
 
-Shiro は、整数型システム、型推論、制御構文（式）、明示的な return 文、および引数付き関数定義を備えた手続き型プログラミング言語およびそのコンパイラです。
+Shiro は、整数型および参照型システム、ユーザー定義構造体、型推論、制御構文（式）、明示的な return 文、および引数付き関数定義を備えた手続き型プログラミング言語およびそのコンパイラです。
 
 ## 1. 基本仕様
 *   **データ型**:
     *   符号付き整数型: `i8`, `i16`, `i32`, `i64`
     *   符号なし整数型: `u8`, `u16`, `u32`, `u64`
+    *   参照型: `&T`, `&&T`, `&&&T` （例: `&i8`, `&Point`）
+    *   ユーザー定義構造体: `struct 構造体名 { メンバ: 型, ... };`
 *   **型推論 (Type Inference)**:
     *   型を明示しない変数宣言 (`let x;`) の場合、最初に値が代入されたタイミング（`x = expr`）で変数の型が自動推論され、固定化されます。
 *   **関数とエントリーポイント**:
@@ -16,16 +18,26 @@ Shiro は、整数型システム、型推論、制御構文（式）、明示�
     *   `return 式;` による関数の途中脱出（早期リターン）に対応しています。
     *   プログラムの実行は `fn main() -> 型` から始まります。
 *   **プログラムの戻り値**: `main` 関数の戻り値がプログラムの終了コード（Exit Code）になります。
+*   **コメント**:
+    *   `//` から行末（`\n`）までの記述は1行コメントとして読み飛ばされます。
+*   **インターフェース要約ファイル生成**:
+    *   `shiro <ファイル名>.shiro -M`（または `--emit-meta`）を実行することで、ソースハッシュと宣言プロトタイプを含む要約ファイル（`<ファイル名>.shiro.meta`）を高速生成できます。
 
 ---
 
 ## 2. 構文規則（EBNF表現）
 
 ```ebnf
-Program            ::= FunctionDefinition*
+Program            ::= Definition*
+Definition         ::= FunctionDefinition | StructDefinition
+
 FunctionDefinition ::= "fn" Identifier "(" [ ParameterList ] ")" "->" Type Block
 ParameterList      ::= Parameter ( "," Parameter )*
-Parameter          ::= Identifier [ ":" Type ]
+Parameter          ::= Identifier ":" Type
+
+StructDefinition   ::= "struct" Identifier "{" [ StructMemberList ] "}" ";"
+StructMemberList   ::= StructMember ( "," StructMember | ";" StructMember )* [ ";" ]
+StructMember       ::= Identifier ":" Type
 
 Statement          ::= ExpressionStatement | VariableDeclareStatement | ReturnStatement
 ReturnStatement    ::= "return" Expression ";"
@@ -35,7 +47,9 @@ ExpressionStatement        ::= Expression ";"
                              | IfExpression [ ";" ]
                              | WhileExpression [ ";" ]
 VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] ";"
-Type                       ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64"
+
+Type                       ::= "&"* BasicType
+BasicType                  ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | Identifier
 
 Expression         ::= Assign
 Assign             ::= LogicalOr [ "=" Assign ]
@@ -49,7 +63,10 @@ Relational         ::= Shift ( ( "<" | "<=" | ">" | ">=" ) Shift )*
 Shift              ::= AddSub ( ( "<<" | ">>" ) AddSub )*
 AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
 MulDivMod          ::= Unary ( ( "*" | "/" | "%" ) Unary )*
-Unary              ::= ( "!" | "~" | "-" ) Unary | Primary
+Unary              ::= ( "!" | "~" | "-" | "&" ) Unary | MemberAccess
+
+MemberAccess       ::= Primary ( "." Identifier )*
+
 Primary            ::= Number 
                              | Character
                              | FunctionCall
@@ -89,8 +106,8 @@ Number             ::= [0-9]+
 | 9 | `<<`, `>>` | 左結合 | ビット左シフト、ビット右シフト | `x >> 1` |
 | 10 | `+`, `-` | 左結合 | 加算、減算 | `x + 5` |
 | 11 | `*`, `/`, `%` | 左結合 | 乗算、除算、剰余算 | `10 % 3` |
-| 12 | `!`, `~`, `-` | 右結合 | 論理否定、ビット否定、単項マイナス | `-x` |
-| 13 (高) | `( )` | なし | グループ化（括弧） | `(2 + 3) * 4` |
+| 12 | `!`, `~`, `-`, `&` | 右結合 | 論理否定、ビット否定、単項マイナス、アドレス取得 | `&x`, `-x` |
+| 13 (高) | `.`, `( )` | 左結合 / なし | メンバアクセス、グループ化（括弧） | `p.x`, `(2 + 3)` |
 
 ---
 
@@ -102,9 +119,15 @@ Number             ::= [0-9]+
 *   **`return` 文**: `return <式>;`
     *   関数の任意の場所から即座に脱出し、評価された `<式>` の値を戻り値として返します。
 *   **明示的な型指定宣言**: `let <変数名>: <型>;`
-    *   型を指定して変数を宣言します。（例: `let x: i32;`）
+    *   型を指定して変数を宣言します。（例: `let x: i32;`, `let p: Point;`）
 *   **型推論による宣言**: `let <変数名>;`
     *   型アノテーションを省略して宣言できます。この時点では型は未決定 (`unknown`) となり、最初の代入 `x = expr` のタイミングで右辺の型が変数に自動適用・固定化されます。
+*   **構造体定義**: `struct <構造体名> { <メンバ1>: <型1>, <メンバ2>: <型2> };`
+    *   複数のフィールドをまとめた複合データ型を定義します。
+*   **メンバアクセス**: `<式>.<メンバ>`
+    *   構造体インスタンスまたは構造体参照のメンバにアクセスします。参照経由アクセスの場合は自動的にデリファレンスされます（`rp.x`）。
+*   **参照型とアドレス取得演算子**: `&<型>` / `&<式>`
+    *   変数のメモリ参照（アドレス）を取得します（`&x`）。参照型変数の評価時は自動的にデリファレンスされて元の値が取得されます。
 *   **代入**: `<左辺値> = <式>`
     *   代入は式として扱われ、代入された値自身を評価値として返します。右結合であるため、`y = x = 10` のような連続した代入が可能です。
     *   すでに型が決定している変数へ異なる型を代入しようとした場合、型不一致（Type Mismatch）エラーが発生します。
@@ -123,6 +146,10 @@ Number             ::= [0-9]+
     *   `||` は左辺が真 (非`0`) の場合、右辺を評価せずに `1` を返します。
 *   **文字リテラル**: `'<文字>'`
     *   シングルクォートで囲まれた1文字は、符号なし8ビット整数型（`u8`）として評価されます。`\n`（改行）、`\t`（タブ）、`\r`（キャリッジリターン）、`\0`（ヌル文字）、`\\`（バックスラッシュ）、`\'`（シングルクォート）などのエスケープシーケンスに対応しています。
+*   **1行コメント**: `// コメント`
+    *   `//` から行末までのテキストを読み飛ばします。
+*   **要約ファイル出力 (`-M` / `--emit-meta`)**:
+    *   ソースハッシュおよび公開/非公開宣言プロトタイプを含む `.shiro.meta` 要約ファイルを高速出力します。
 *   **意味解析（検証規則）**:
     *   **二重宣言の禁止**: 同一スコープ内で同名の変数を複数回宣言することはできません。
     *   **未定義変数の使用禁止**: 宣言されていない変数を使用したり代入したりすることはできません。
@@ -187,6 +214,37 @@ fn main() -> i64 {
     let x;         // 型未決定 (unknown)
     x = 42;        // 最初の代入により x の型が i64 に確定
     x;             // 評価値: 42
+}
+```
+
+### 参照型と自動デリファレンス
+```rust
+fn main() -> i8 {
+    let x: i8;
+    x = 42;
+    let rx;          // 型推論により &i8 に設定
+    rx = &x;         // x のアドレスを保持
+    rx;              // 自動デリファレンスにより 42 を評価
+}
+```
+
+### 構造体と参照経由のメンバ操作
+```rust
+struct Point {
+    x: i64,
+    y: i64
+};
+
+fn main() -> i64 {
+    let p: Point;
+    p.x = 10;
+    p.y = 20;
+
+    let rp;
+    rp = &p;         // 構造体 Point への参照
+    rp.x = 50;       // 参照経由で p.x を変更
+
+    p.x + p.y;       // 70 に評価される
 }
 ```
 
@@ -255,3 +313,36 @@ fn main() -> i8 {
 }
 ```
 
+### コメントと早期リターン
+```rust
+// 2つの数値の最大値を計算
+fn max(a: i32, b: i32) -> i32 {
+    if (a > b) {
+        return a;    // 早期リターン
+    }
+    return b;
+}
+
+fn main() -> i8 {
+    max(10, 20);     // 20 に評価される
+}
+```
+
+### 要約ファイルの生成
+```bash
+# main.shiro.meta を出力
+./shiro main.shiro -M
+```
+
+出力される `main.shiro.meta` の例:
+```text
+// shiro-interface
+// source_file: main.shiro
+// source_hash: 0832eb8b349bc3e3
+
+// public definition
+
+// private definition
+fn max(a: i32, b: i32) -> i32;
+fn main() -> i8;
+```

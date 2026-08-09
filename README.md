@@ -2,12 +2,14 @@
 
 [日本語版はこちら (README.ja.md)](./README.ja.md)
 
-Shiro is a procedural programming language featuring a primitive integer type system, type inference, control flow expressions, explicit return statements, and function definitions with parameters.
+Shiro is a procedural programming language featuring a primitive integer and reference type system, user-defined structs, type inference, control flow expressions, explicit return statements, and function definitions with parameters.
 
 ## 1. Specifications
 *   **Data Types**:
     *   Signed integers: `i8`, `i16`, `i32`, `i64`
     *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
+    *   Reference types: `&T`, `&&T`, `&&&T` (e.g. `&i8`, `&Point`)
+    *   User-defined Structs: `struct StructName { member: Type, ... };`
 *   **Type Inference**:
     *   Variables declared without an explicit type annotation (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
 *   **Functions & Entry Point**:
@@ -16,16 +18,26 @@ Shiro is a procedural programming language featuring a primitive integer type sy
     *   Functions support explicit early returns via `return expr;`.
     *   Program execution begins at the `fn main() -> Type` function definition.
 *   **Program Exit Value**: The return value of the `main` function becomes the exit code of the executable.
+*   **Comments**:
+    *   Single-line comments starting with `//` are ignored until the end of line (`\n`).
+*   **Interface Meta-File Generation**:
+    *   Running `shiro <file>.shiro -M` (or `--emit-meta`) generates `<file>.shiro.meta` containing interface declarations and a 64-bit FNV-1a source hash.
 
 ---
 
 ## 2. Grammar (EBNF Representation)
 
 ```ebnf
-Program            ::= FunctionDefinition*
+Program            ::= Definition*
+Definition         ::= FunctionDefinition | StructDefinition
+
 FunctionDefinition ::= "fn" Identifier "(" [ ParameterList ] ")" "->" Type Block
 ParameterList      ::= Parameter ( "," Parameter )*
-Parameter          ::= Identifier [ ":" Type ]
+Parameter          ::= Identifier ":" Type
+
+StructDefinition   ::= "struct" Identifier "{" [ StructMemberList ] "}" ";"
+StructMemberList   ::= StructMember ( "," StructMember | ";" StructMember )* [ ";" ]
+StructMember       ::= Identifier ":" Type
 
 Statement          ::= ExpressionStatement | VariableDeclareStatement | ReturnStatement
 ReturnStatement    ::= "return" Expression ";"
@@ -35,7 +47,9 @@ ExpressionStatement        ::= Expression ";"
                              | IfExpression [ ";" ]
                              | WhileExpression [ ";" ]
 VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] ";"
-Type                       ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64"
+
+Type                       ::= "&"* BasicType
+BasicType                  ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | Identifier
 
 Expression         ::= Assign
 Assign             ::= LogicalOr [ "=" Assign ]
@@ -49,7 +63,10 @@ Relational         ::= Shift ( ( "<" | "<=" | ">" | ">=" ) Shift )*
 Shift              ::= AddSub ( ( "<<" | ">>" ) AddSub )*
 AddSub             ::= MulDivMod ( ( "+" | "-" ) MulDivMod )*
 MulDivMod          ::= Unary ( ( "*" | "/" | "%" ) Unary )*
-Unary              ::= ( "!" | "~" | "-" ) Unary | Primary
+Unary              ::= ( "!" | "~" | "-" | "&" ) Unary | MemberAccess
+
+MemberAccess       ::= Primary ( "." Identifier )*
+
 Primary            ::= Number 
                              | Character
                              | FunctionCall
@@ -89,8 +106,8 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 | 9 | `<<`, `>>` | Left | Bitwise Left/Right Shift | `x >> 1` |
 | 10 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
 | 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
-| 12 | `!`, `~`, `-` | Right | Logical NOT, Bitwise NOT, Unary Minus | `-x` |
-| 13 (Highest) | `( )` | None | Grouping (Parentheses) | `(2 + 3) * 4` |
+| 12 | `!`, `~`, `-`, `&` | Right | Logical NOT, Bitwise NOT, Unary Minus, Address-of | `&x`, `-x` |
+| 13 (Highest) | `.`, `( )` | Left / None | Member Access, Grouping | `p.x`, `(2 + 3)` |
 
 ---
 
@@ -102,9 +119,15 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 *   **Return Statements**: `return <expression>;`
     *   Exits early from the enclosing function at any point, returning the evaluated `<expression>`.
 *   **Explicit Type Declaration**: `let <variable_name>: <type>;`
-    *   Declares a variable with an explicit primitive integer type (e.g., `let x: i32;`).
+    *   Declares a variable with an explicit type (e.g., `let x: i32;` or `let p: Point;`).
 *   **Type Inferred Declaration**: `let <variable_name>;`
     *   Declares a variable without a type annotation. The type is initially `unknown` and is automatically inferred and fixed upon its first assignment (`x = expr`).
+*   **Struct Definitions**: `struct <Name> { <field1>: <type1>, <field2>: <type2> };`
+    *   Defines a compound data structure with named members.
+*   **Member Access**: `<expr>.<member>`
+    *   Accesses a member of a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x`).
+*   **Reference Types & Address Operator**: `&<type>` / `&<expr>`
+    *   Takes the memory address of an lvalue (`&x`). Reading a reference automatically dereferences it to fetch the underlying value.
 *   **Assignment**: `<lvalue> = <expression>`
     *   Assignment is treated as an expression, returning the assigned value itself. Since it is right-associative, chained assignment like `y = x = 10` is supported.
     *   Assigning a value of a mismatched type to an already typed variable results in a compile-time type mismatch error.
@@ -121,6 +144,10 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation.
 *   **Character Literals**: `'<character>'`
     *   Single characters wrapped in single quotes are parsed as unsigned 8-bit integers (`u8`). Supports escape sequences like `\n` (newline), `\t` (tab), `\r` (carriage return), `\0` (null byte), `\\` (backslash), and `\'` (single quote).
+*   **Single-line Comments**: `// comment`
+    *   Skips all characters after `//` until the end of the line.
+*   **Meta-File Export (`-M` / `--emit-meta`)**:
+    *   Generates a `.shiro.meta` interface summary file containing source hash and exported/private declarations without compiling to assembly.
 *   **Semantic Validation Rules**:
     *   **No Duplicate Declarations**: You cannot declare variables with the same name in the same scope.
     *   **No Undeclared Variable Usage**: You cannot read from or assign to a variable before it is declared.
@@ -188,6 +215,37 @@ fn main() -> i64 {
 }
 ```
 
+### Reference Types and Auto-Dereferencing
+```rust
+fn main() -> i8 {
+    let x: i8;
+    x = 42;
+    let rx;          // Type inferred as &i8
+    rx = &x;         // Stores address of x
+    rx;              // Auto-dereferenced, evaluates to 42
+}
+```
+
+### Structs and Reference Member Access
+```rust
+struct Point {
+    x: i64,
+    y: i64
+};
+
+fn main() -> i64 {
+    let p: Point;
+    p.x = 10;
+    p.y = 20;
+
+    let rp;
+    rp = &p;         // Reference to struct Point
+    rp.x = 50;       // Indirectly modifies p.x through reference
+
+    p.x + p.y;       // Evaluates to 70
+}
+```
+
 ### Unsigned Overflow & Register Wrap-around
 ```rust
 fn main() -> u8 {
@@ -240,6 +298,7 @@ fn main() -> i64 {
     }                // Computes the sum from 1 to 5
     sum;             // Evaluates to 15
 }
+```
 
 ### Character Literals
 ```rust
@@ -250,4 +309,38 @@ fn main() -> i8 {
     nl = '\n';       // Escapes are supported, evaluated as 10
     c + 1;           // Evaluates to 66 (ASCII code for 'B')
 }
+```
+
+### Comments and Explicit Return
+```rust
+// Compute maximum of two numbers
+fn max(a: i32, b: i32) -> i32 {
+    if (a > b) {
+        return a;    // Returns a immediately
+    }
+    return b;
+}
+
+fn main() -> i8 {
+    max(10, 20);     // Evaluates to 20
+}
+```
+
+### Interface Meta-File Generation
+```bash
+# Generate main.shiro.meta
+./shiro main.shiro -M
+```
+
+Example `main.shiro.meta` output:
+```text
+// shiro-interface
+// source_file: main.shiro
+// source_hash: 0832eb8b349bc3e3
+
+// public definition
+
+// private definition
+fn max(a: i32, b: i32) -> i32;
+fn main() -> i8;
 ```
