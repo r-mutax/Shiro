@@ -105,9 +105,7 @@ ASTNode* Parser::parseStructDefinition(){
 
     std::vector<ASTNode*> members;
     while (!stream.consume(Token::RBRACE)) {
-        if (!members.empty()) {
-            expect(Token::COMMA, "Expected ',' before next member.");
-        }
+        stream.consume(Token::SEMICOLON);
 
         bool is_pub = stream.consume(Token::PUB);
 

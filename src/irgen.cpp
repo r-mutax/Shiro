@@ -13,6 +13,14 @@ bool IRGenerator::generate(ASTNode* ast) {
         if(def->kind == ASTNode::NODE_FUNCTION_DEFINITION){
             IRFunction func = gen_function(def);
             program.functions.push_back(std::move(func));
+        } else if(def->kind == ASTNode::NODE_STRUCT_DEFINITION){
+            auto* strct = static_cast<StructDefinitionNode*>(def);
+            for(auto& it : strct->members){
+                if(it->kind == ASTNode::NODE_FUNCTION_DEFINITION){
+                    IRFunction func = gen_function(it);
+                    program.functions.push_back(std::move(func));
+                }
+            }
         }
     }
 

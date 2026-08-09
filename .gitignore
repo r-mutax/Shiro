@@ -8,6 +8,8 @@ shiro
 tmp
 tmp.s
 a.out
+*.meta
+test/*
 
 .agents/*
 .clang-format

@@ -92,14 +92,20 @@ bool Semantics::checkNode(ASTNode* node) {
             int offset = 0;
 
             for(auto& it : strct->members){
-                if(!checkNode(it)) return false;
-
-                if(it->kind == ASTNode::NODE_FUNCTION_DEFINITION){
+                if(it->kind == ASTNode::NODE_FUNCTION_DEFINITION){                    
                     // method
-                    // auto* fd = static_cast<FunctionDefinitionNode*>(it);
+                    auto* fd = static_cast<FunctionDefinitionNode*>(it);
+                    fd->fn_name = strct->strct_name + "__" + fd->fn_name;
                     
+                    fd->params.insert(fd->params.begin(), 
+                        new VariableDeclareNode("this", fd->type_loc, "&" + strct->strct_name)
+                    );
+
+                    if(!checkNode(it)) return false;                
                 } else if(it->kind == ASTNode::NODE_VARIABLE_DECLARE){
                     // field
+                    if(!checkNode(it)) return false;
+
                     auto* vd = static_cast<VariableDeclareNode*>(it);
                     
                     const Symbol* sym = strct_type->scope->find(vd->name);
