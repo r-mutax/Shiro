@@ -116,7 +116,14 @@ TokenStream Lexer::lex_src(std::string_view src) {
                 break;
             }
             case '/': {
-                create_token(Token::SLASH, i, "/");
+                if(i+1 < len && src[i+1] == '/'){
+                    while(i < len && src[i] != '\n'){
+                        i++;
+                    }
+                    i--;
+                } else {
+                    create_token(Token::SLASH, i, "/");
+                }
                 break;
             }
             case '%': {
