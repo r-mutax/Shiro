@@ -9,7 +9,7 @@ Shiro is a procedural programming language featuring a primitive integer and ref
     *   Signed integers: `i8`, `i16`, `i32`, `i64`
     *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
     *   Reference types: `&T`, `&&T`, `&&&T` (e.g. `&i8`, `&Point`)
-    *   User-defined Structs: `struct StructName { member: Type, ... };`
+    *   User-defined Structs: `struct StructName { member: Type, ... };` (Methods can be defined inside `struct` body)
 *   **Type Inference**:
     *   Variables declared without an explicit type annotation (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
 *   **Functions & Entry Point**:
@@ -37,7 +37,7 @@ Parameter          ::= Identifier ":" Type
 
 StructDefinition   ::= "struct" Identifier "{" [ StructMemberList ] "}" ";"
 StructMemberList   ::= StructMember ( "," StructMember | ";" StructMember )* [ ";" ]
-StructMember       ::= Identifier ":" Type
+StructMember       ::= Identifier ":" Type | FunctionDefinition
 
 Statement          ::= ExpressionStatement | VariableDeclareStatement | ReturnStatement
 ReturnStatement    ::= "return" Expression ";"
@@ -107,7 +107,7 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 | 10 | `+`, `-` | Left | Addition, Subtraction | `x + 5` |
 | 11 | `*`, `/`, `%` | Left | Multiplication, Division, Modulo | `10 % 3` |
 | 12 | `!`, `~`, `-`, `&` | Right | Logical NOT, Bitwise NOT, Unary Minus, Address-of | `&x`, `-x` |
-| 13 (Highest) | `.`, `( )` | Left / None | Member Access, Grouping | `p.x`, `(2 + 3)` |
+| 13 (Highest) | `.`, `( )` | Left / None | Member Access, Method Call, Grouping | `p.x`, `p.double()`, `(2 + 3)` |
 
 ---
 
@@ -122,10 +122,10 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Declares a variable with an explicit type (e.g., `let x: i32;` or `let p: Point;`).
 *   **Type Inferred Declaration**: `let <variable_name>;`
     *   Declares a variable without a type annotation. The type is initially `unknown` and is automatically inferred and fixed upon its first assignment (`x = expr`).
-*   **Struct Definitions**: `struct <Name> { <field1>: <type1>, <field2>: <type2> };`
-    *   Defines a compound data structure with named members.
-*   **Member Access**: `<expr>.<member>`
-    *   Accesses a member of a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x`).
+*   **Struct Definitions**: `struct <Name> { <field1>: <type1>, <field2>: <type2>, fn <method>(...) -> <type> { ... } };`
+    *   Defines a compound data structure with named members and methods. Methods defined inside structs implicitly receive a first parameter `this: &StructName` (a reference to the struct instance) and are mangled as `StructName__methodName`.
+*   **Member Access & Method Calls**: `<expr>.<member>` / `<expr>.<method>(<args...>)`
+    *   Accesses a member or invokes a method on a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x` or `rp.double()`).
 *   **Reference Types & Address Operator**: `&<type>` / `&<expr>`
     *   Takes the memory address of an lvalue (`&x`). Reading a reference automatically dereferences it to fetch the underlying value.
 *   **Assignment**: `<lvalue> = <expression>`
@@ -243,6 +243,28 @@ fn main() -> i64 {
     rp.x = 50;       // Indirectly modifies p.x through reference
 
     p.x + p.y;       // Evaluates to 70
+}
+```
+
+### Struct Methods and Reference Invocation
+```rust
+struct Point {
+    x: i64,
+    y: i64,
+
+    fn double() -> i64 {
+        return this.x * 2;
+    }
+};
+
+fn main() -> i64 {
+    let p: Point;
+    p.x = 10;
+    p.y = 20;
+
+    let rp;
+    rp = &p;
+    rp.double();     // Method invocation via reference, evaluates to 20
 }
 ```
 

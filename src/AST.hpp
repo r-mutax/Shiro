@@ -90,6 +90,7 @@ struct ASTNode {
         NODE_WHILE,
         NODE_RETURN,
         NODE_MEMBER_ACCESS,
+        NODE_METHOD_CALL,
     };
 
     Kind kind;
@@ -185,9 +186,20 @@ struct MemberAccessNode : public ASTNode {
 struct FunctionCallNode : public ASTNode {
     std::string fn_name;
     std::vector<ASTNode*> args;
+    std::vector<const Type*> param_types;
 
     explicit FunctionCallNode(std::string fn_name, std::vector<ASTNode*> args)
         : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name), args(args){};
+};
+
+struct MethodCallNode : public ASTNode {
+    ASTNode* object;
+    std::string method_name;
+    std::vector<ASTNode*> args;
+    std::vector<const Type*> param_types;
+    
+    explicit MethodCallNode(ASTNode* object, std::string method_name, std::vector<ASTNode*> args)
+        : ASTNode(Kind::NODE_METHOD_CALL), object(object), method_name(method_name), args(args){};
 };
 
 struct IfNode : public ASTNode {

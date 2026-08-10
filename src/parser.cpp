@@ -106,6 +106,7 @@ ASTNode* Parser::parseStructDefinition(){
     std::vector<ASTNode*> members;
     while (!stream.consume(Token::RBRACE)) {
         stream.consume(Token::SEMICOLON);
+        stream.consume(Token::COMMA);
 
         bool is_pub = stream.consume(Token::PUB);
 
@@ -359,8 +360,23 @@ ASTNode* Parser::parsePostfix(){
             if (member.type != Token::IDENT) {
                 error(member.loc, "Expected IDENT after '.', but got " + member.value);
             }
-            lhs = new MemberAccessNode(lhs, member.value);
-            lhs->loc = tok.loc;
+
+            if(stream.peek().type == Token::LPAREN){
+                // parse function call
+                stream.next();
+                std::vector<ASTNode*> args;
+                if (!stream.consume(Token::RPAREN)) {
+                    do {
+                        args.push_back(parseExpression());
+                    } while (stream.consume(Token::COMMA));
+                    expect(Token::RPAREN, "Expected ')' after method call arguments.");
+                }
+                lhs = new MethodCallNode(lhs, member.value, args);
+                lhs->loc = tok.loc;
+            } else {
+                lhs = new MemberAccessNode(lhs, member.value);
+                lhs->loc = tok.loc;
+            }
         } else {
             break;
         }

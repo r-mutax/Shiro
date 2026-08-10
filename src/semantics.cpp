@@ -1,5 +1,6 @@
 #include "semantics.hpp"
 #include "AST.hpp"
+#include <cstddef>
 
 bool Semantics::analyze(ASTNode* ast) {
     if (!ast) {
@@ -227,6 +228,52 @@ bool Semantics::checkNode(ASTNode* node) {
             
             ma->evaluated_type = sym->type_info;
             ma->offset = sym->offset;
+            return true;
+        }
+        case ASTNode::NODE_METHOD_CALL:{
+            auto* mc = static_cast<MethodCallNode*>(node);
+            
+            if (!checkNode(mc->object)) return false;
+
+            const Type* type = mc->object->evaluated_type;
+            while (type && type->isReference()) {
+                type = type->base_type;
+            }
+
+            if (!type || !type->isStruct()) {
+                error(mc->object->loc, "Not a struct");
+                return false;
+            }
+            
+            std::string mangled_name = type->name + "__" + mc->method_name;
+            const Symbol* sym = type->scope->find(mangled_name);
+            if (sym == nullptr) {
+                error(mc->loc, "Method '{}' not found", mc->method_name);
+                return false;
+            }
+
+            ASTNode* this_arg = mc->object;
+            mc->args.insert(mc->args.begin(), this_arg);
+            mc->param_types.push_back(make_reference(type));
+
+            for(size_t i = 1; i < mc->args.size(); ++i){
+                if(!checkNode(mc->args[i])){
+                    return false;
+                }
+
+                if(isAutoCastInteger(mc->args[i])){
+                    mc->args[i]->evaluated_type = sym->params[i]->type_info;
+                }
+
+                if(mc->args[i]->evaluated_type != sym->params[i]->type_info){
+                    error(mc->args[i]->loc, "Type mismatch in argument {}", i);
+                    return false;
+                }
+
+                mc->param_types.push_back(sym->params[i]->type_info);
+            }
+            
+            mc->evaluated_type = sym->type_info;
             return true;
         }
         case ASTNode::NODE_RETURN: {

@@ -1,5 +1,6 @@
 #include "irgen.hpp"
 #include "AST.hpp"
+#include <cstddef>
 #include <iostream>
 
 bool IRGenerator::generate(ASTNode* ast) {
@@ -171,6 +172,31 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
 
         Operand res_temp = Operand::Temp(next_temp++, fc->evaluated_type);
         emit_call(res_temp, Operand::Func(fc->fn_name), args);
+        return res_temp;
+    } else if(node->kind == ASTNode::NODE_METHOD_CALL){
+        auto* mc = static_cast<MethodCallNode*>(node);
+        
+        const Type* type = mc->object->evaluated_type;
+        while(type && type->isReference()){
+            type = type->base_type;
+        }
+
+        std::string mangled_name = type->name + "__" + mc->method_name;
+        
+        std::vector<Operand> args;
+        for(size_t i = 0; i < mc->param_types.size(); ++i){
+            auto* arg_node = mc->args[i];
+            const Type* param_type = mc->param_types[i];
+
+            if(param_type->isReference()){
+                args.push_back(gen_lval(arg_node));
+            } else {
+                args.push_back(gen_expr(arg_node));
+            }
+        }
+
+        Operand res_temp = Operand::Temp(next_temp++, mc->evaluated_type);
+        emit_call(res_temp, Operand::Func(mangled_name), args);
         return res_temp;
     } else if (node->kind == ASTNode::NODE_IF) {
         IfNode* if_node = static_cast<IfNode*>(node);
