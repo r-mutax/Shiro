@@ -166,11 +166,20 @@ ASTNode* Parser::parseVariableDeclare() {
         type_tok.loc = type_loc_let;
     }
 
-    expect(Token::SEMICOLON, "Expected ';' after variable declare.");
-
     auto vd = new VariableDeclareNode(vname.value, type_tok.loc, type_name);
     vd->loc = vname.loc;
+
+    if(stream.consume(Token::EQUAL)){
+        vd->init_expr = parseInitExpression();
+    }
+
+    expect(Token::SEMICOLON, "Expected ';' after variable declare.");
+
     return vd;
+}
+
+ASTNode* Parser::parseInitExpression(){
+    return parseExpression();
 }
 
 ASTNode* Parser::parseReturnStatement() {

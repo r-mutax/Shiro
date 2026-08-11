@@ -187,6 +187,27 @@ bool Semantics::checkNode(ASTNode* node) {
 
             vd->symbol_id = sym->id;
             vd->evaluated_type = var_type;
+
+            if(vd->init_expr != nullptr){
+                if(!checkNode(vd->init_expr)) return false;
+
+                if(var_type->name == "unknown"){
+                    var_type = vd->init_expr->evaluated_type;
+                    sym->type_info = var_type;
+                    vd->evaluated_type = var_type;
+                } else if (isAutoCastInteger(vd->init_expr)) {
+                    vd->init_expr->evaluated_type = var_type;
+                }
+
+                if (vd->init_expr->evaluated_type != var_type) {
+                    error(vd->init_expr->loc,
+                          "Type mismatch in init expression of variable '{}'. "
+                          "Expected "
+                          "'{}', but got '{}'",
+                          vd->name, var_type->name,
+                          vd->init_expr->evaluated_type->name);
+                }
+            }
             return true;
         }
         case ASTNode::NODE_VARIABLE: {

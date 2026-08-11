@@ -18,6 +18,7 @@ class Parser {
     ASTNode* parseStatement();
     ASTNode* parseVariableDeclare();
     ASTNode* parseReturnStatement();
+    ASTNode* parseInitExpression();
     ASTNode* parseExpression();
     ASTNode* parseAssign();
     ASTNode* parseLogicalOr();

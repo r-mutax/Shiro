@@ -157,6 +157,9 @@ struct VariableDeclareNode : public ASTNode {
     std::string name;
     std::string type_name;
     SourceLoc type_loc;
+
+    ASTNode* init_expr = nullptr;
+
     int symbol_id = -1;
     bool is_pub = false;
 

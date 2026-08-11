@@ -125,8 +125,14 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
         VariableDeclareNode* vd = static_cast<VariableDeclareNode*>(node);
         Operand temp_val = Operand::Temp(next_temp++, vd->evaluated_type);
         symid_to_temp[vd->symbol_id] = temp_val;
-        if(!vd->evaluated_type->isStruct()){
-            emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
+
+        if(vd->init_expr != nullptr){
+            Operand init_val = gen_expr(vd->init_expr);
+            emit_mov(temp_val, init_val);
+        } else {
+            if(!vd->evaluated_type->isStruct()){
+                emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
+            }
         }
         return temp_val;
     } else if (node->kind == ASTNode::NODE_RETURN) {
