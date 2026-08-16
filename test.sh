@@ -61,7 +61,6 @@ assert() {
 
 # Run tests
 echo "Running Shiro compiler tests..."
-assert "fn main() -> i8 {let x : i8; let y; y = &x; x = 10; return y; }" 10
 assert "fn main() -> i8 {42;}" 42
 assert "fn main() -> i8 {40 + 2;}" 42
 assert "fn main() -> i8 {222 + 323;}" 33
@@ -165,13 +164,11 @@ assert "fn main() -> i8 { let y : i8; y = 10; let x : i8 = y; return x; }" 10
 assert "fn foo(x : i8) -> i8 { let y : i8 = x; return y; } fn main() -> i8 { return foo(20); }" 20
 
 # --- Reference Types ---
-assert "fn main() -> i8 { let x: i8; x = 42; let y; y = &x; y; }" 42
-assert "fn main() -> i8 { let a: i8; let b: i8; a = 10; b = 20; let ra; let rb; ra = &a; rb = &b; ra + rb; }" 30
-assert "fn main() -> i8 { let x: i8; x = 50; let rx; rx = &x; let rrx; rrx = &rx; rrx; }" 50
-assert "fn main() -> i8 { let x: i8; x = 10; let rx; rx = &x; let rrx; rrx = &rx; let rrrx; rrrx = &rrx; rrrx; }" 10
-assert "fn main() -> i8 { let x: i8; x = 5; let rx; rx = &x; x = 15; rx; }" 15
-assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp; rp = &p; rp.x + rp.y; }" 30
-assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp; rp = &p; rp.x = 50; p.x; }" 50
+assert "fn main() -> i8 { let x: i8 = 42; let y = &x; y; }" 42
+assert "fn main() -> i8 { let x: i8 = 10; let rx = &x; let rrx = &rx; let rrrx = &rrx; rrrx; }" 10
+assert "fn main() -> i8 { let x: i8 = 5; let rx = &x; x = 15; rx; }" 15
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp = &p; rp.x + rp.y; }" 30
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rp = &p; rp.x = 50; p.x; }" 50
 
 # --- Character Literals ---
 assert "fn main() -> i8 { 'A'; }" 65
@@ -179,6 +176,16 @@ assert "fn main() -> i8 { '\n'; }" 10
 assert "fn main() -> i8 { '\\\\'; }" 92
 assert "fn main() -> i8 { 'A' + 1; }" 66
 assert "fn main() -> i8 { let c: u8; c = 'Z'; c; }" 90
+
+assert "fn main() -> i8 { let x: i8 = 42; let rx = &x; rx; }" 42
+assert "fn main() -> i8 { let x: i8 = 42; let rx: &i8 = &x; rx; }" 42
+assert "fn main() -> i8 { let y: i8 = 10; let x = &y; let z = &x; z; }" 10
+assert "fn main() -> i8 { let y: i8 = 10; let x = &y; let z = &x; x = 42; return z; }" 42
+assert "fn main() -> i8 { let a: i8 = 10; let b: i8 = 20; let ra: &i8 = &a; let rb: &i8 = &b; ra + rb; }" 30
+
+assert "fn main() -> i8 { let x: i8 = 10; return x; }" 10
+assert "fn main() -> i8 { let a: i8 = 20; let b: i8 = a + 22; return b; }" 42
+assert "fn foo(x: i8) -> i8 { let y: i8 = x + 5; return y; } fn main() -> i8 { return foo(37); }" 42
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

@@ -337,6 +337,10 @@ bool Semantics::checkNode(ASTNode* node) {
             if (uo->op.type == Token::NOT) {
                 uo->evaluated_type = i64_t;
             } else if(uo->op.type == Token::AND){
+                if(uo->value->kind != ASTNode::NODE_VARIABLE){
+                    error(uo->loc, "Left value of '&' is not a variable.");
+                    return false;
+                }
                 // reference
                 uo->evaluated_type = make_reference(uo->value->evaluated_type);
             } else {
@@ -401,6 +405,10 @@ bool Semantics::checkNode(ASTNode* node) {
                 if (!checkNode(as->expr))
                     return false;
                 if (sym->type_info->name == "unknown") {
+                    if(as->expr->evaluated_type->isReference()){
+                        error(var_node->loc, "Cannot infer reference type for variable '{}' via assignment. Use initialization 'let {} = ...;' instead.", var_node->name, var_node->name);
+                        return false;
+                    }
                     sym->type_info = as->expr->evaluated_type;
                 } else if (isAutoCastInteger(as->expr)) {
                     as->expr->evaluated_type = sym->type_info;
@@ -591,6 +599,10 @@ const Type* Semantics::make_reference(const Type* t){
 
     if(t->ref_type){
         return t->ref_type;
+    }
+
+    if(t->isReference()){
+        return t;
     }
 
     Type ref;

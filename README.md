@@ -8,10 +8,11 @@ Shiro is a procedural programming language featuring a primitive integer and ref
 *   **Data Types**:
     *   Signed integers: `i8`, `i16`, `i32`, `i64`
     *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
-    *   Reference types: `&T`, `&&T`, `&&&T` (e.g. `&i8`, `&Point`)
+    *   Reference types: `&T` (e.g. `&i8`, `&Point`). References are created via initializers `let rx = &x;`, and multiple references `&rx` automatically flatten into a single reference `&T` to the underlying value.
     *   User-defined Structs: `struct StructName { member: Type, ... };` (Methods can be defined inside `struct` body)
 *   **Type Inference**:
-    *   Variables declared without an explicit type annotation (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
+    *   Variables declared without an explicit type annotation or initialization (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
+    *   However, reference binding is only permitted via initializers (`let rx = &x;`). Attempting to infer a reference type for an `unknown` variable via assignment is prohibited.
 *   **Functions & Entry Point**:
     *   Functions are defined using `fn name(param: Type, ...) -> Type { ... }`.
     *   Functions support up to 6 parameters.
@@ -46,7 +47,7 @@ ExpressionStatement        ::= Expression ";"
                              | Block [ ";" ]
                              | IfExpression [ ";" ]
                              | WhileExpression [ ";" ]
-VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] ";"
+VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] [ "=" Expression ] ";"
 
 Type                       ::= "&"* BasicType
 BasicType                  ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | Identifier
@@ -118,16 +119,18 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Calls an existing function, passing arguments matching the function signature.
 *   **Return Statements**: `return <expression>;`
     *   Exits early from the enclosing function at any point, returning the evaluated `<expression>`.
-*   **Explicit Type Declaration**: `let <variable_name>: <type>;`
-    *   Declares a variable with an explicit type (e.g., `let x: i32;` or `let p: Point;`).
-*   **Type Inferred Declaration**: `let <variable_name>;`
-    *   Declares a variable without a type annotation. The type is initially `unknown` and is automatically inferred and fixed upon its first assignment (`x = expr`).
+*   **Explicit Type Declaration**: `let <variable_name>: <type> [= <expression>];`
+    *   Declares a variable with an explicit type (e.g., `let x: i32 = 10;` or `let p: Point;`).
+*   **Type Inferred Declaration**: `let <variable_name> [= <expression>];`
+    *   Declares a variable without a type annotation. If an initialization expression is provided, its type is automatically inferred. Without an initializer, the type is initially `unknown` and fixed upon its first assignment (`x = expr`).
 *   **Struct Definitions**: `struct <Name> { <field1>: <type1>, <field2>: <type2>, fn <method>(...) -> <type> { ... } };`
     *   Defines a compound data structure with named members and methods. Methods defined inside structs implicitly receive a first parameter `this: &StructName` (a reference to the struct instance) and are mangled as `StructName__methodName`.
 *   **Member Access & Method Calls**: `<expr>.<member>` / `<expr>.<method>(<args...>)`
     *   Accesses a member or invokes a method on a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x` or `rp.double()`).
-*   **Reference Types & Address Operator**: `&<type>` / `&<expr>`
-    *   Takes the memory address of an lvalue (`&x`). Reading a reference automatically dereferences it to fetch the underlying value.
+*   **Reference Types & Address Operator**: `&<type>` / `&<variable>`
+    *   Takes the memory address of an lvalue variable. Reference creation and binding is only allowed in declaration initializers (`let rx = &x;` or `let rx: &i8 = &x;`). Attempting to bind a reference to an uninitialized `unknown` variable via assignment is prohibited.
+    *   Applying `&` to a reference variable `rx` (`&rx`) does not create a double reference (`&&T`), but automatically flattens into a single reference `&T` to the underlying value (`let z = &rx;`).
+    *   Assigning a value to a reference variable `rx = val;` mutates the underlying referenced value. Reading a reference automatically dereferences it to fetch the value.
 *   **Assignment**: `<lvalue> = <expression>`
     *   Assignment is treated as an expression, returning the assigned value itself. Since it is right-associative, chained assignment like `y = x = 10` is supported.
     *   Assigning a value of a mismatched type to an already typed variable results in a compile-time type mismatch error.
@@ -218,11 +221,11 @@ fn main() -> i64 {
 ### Reference Types and Auto-Dereferencing
 ```rust
 fn main() -> i8 {
-    let x: i8;
-    x = 42;
-    let rx;          // Type inferred as &i8
-    rx = &x;         // Stores address of x
-    rx;              // Auto-dereferenced, evaluates to 42
+    let x: i8 = 42;
+    let rx = &x;     // Inferred as &i8 type
+    let rrx = &rx;   // Automatically flattens into a single &i8 reference to x
+    rx = 100;        // Mutates the underlying value x through reference
+    rrx;             // Auto-dereferenced, evaluates to 100
 }
 ```
 

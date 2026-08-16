@@ -269,7 +269,12 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
                 fatal("IRGen Error: variable'" + var->name +
                     "'not found in symbol map");
             }
-            emit_mov(it->second, value);
+            if(var->evaluated_type->isReference()){
+                emit_store(value, it->second);
+            }
+            else {
+                emit_mov(it->second, value);
+            }
             return value;
         } else {
             // assign to struct and so on...
@@ -296,7 +301,19 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
         } else if (un_op->op.type == Token::CHILDA) {
             emit_bnot(res_temp, value);
         } else if(un_op->op.type == Token::AND) {
-            return gen_lval(un_op->value);
+            if(un_op->value->evaluated_type->isReference()){
+                if(un_op->value->kind == ASTNode::NODE_VARIABLE){
+                    auto* var = static_cast<VariableNode*>(un_op->value);
+                    auto it = symid_to_temp.find(var->symbol_id);
+                    if(it == symid_to_temp.end()){
+                        fatal("IRGen Error: variable '" + var->name + "'not found in symbol map");
+                    }
+                    return it->second;
+                }
+                return gen_expr(un_op->value);
+            } else {
+                return gen_lval(un_op->value);
+            }
         }
         return res_temp;
     } else if (node->kind == ASTNode::NODE_BINARY_OP) {
