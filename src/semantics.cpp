@@ -232,7 +232,7 @@ bool Semantics::checkNode(ASTNode* node) {
             if (!checkNode(ma->struct_expr)) return false;
 
             const Type* type = ma->struct_expr->evaluated_type;
-            while (type && type->isReference()) {
+            if (type && type->isReference()) {
                 type = type->base_type;
             }
 
@@ -257,7 +257,7 @@ bool Semantics::checkNode(ASTNode* node) {
             if (!checkNode(mc->object)) return false;
 
             const Type* type = mc->object->evaluated_type;
-            while (type && type->isReference()) {
+            if (type && type->isReference()) {
                 type = type->base_type;
             }
 
@@ -534,10 +534,10 @@ bool Semantics::isCompatibleType(const Type* t1, const Type* t2){
     Type* base1 = const_cast<Type*>(t1);
     Type* base2 = const_cast<Type*>(t2);
 
-    while(base1 && base1->isReference()){
+    if(base1 && base1->isReference()){
         base1 = const_cast<Type*>(base1->base_type);
     }
-    while(base2 && base2->isReference()){
+    if(base2 && base2->isReference()){
         base2 = const_cast<Type*>(base2->base_type);
     }
 

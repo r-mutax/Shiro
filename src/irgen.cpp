@@ -183,7 +183,7 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
         auto* mc = static_cast<MethodCallNode*>(node);
         
         const Type* type = mc->object->evaluated_type;
-        while(type && type->isReference()){
+        if(type && type->isReference()){
             type = type->base_type;
         }
 
@@ -442,12 +442,6 @@ Operand IRGenerator::gen_lval(ASTNode* node){
         Operand base_addr = gen_lval(ma->struct_expr);
 
         const Type* struct_type = ma->struct_expr->evaluated_type;
-        while (struct_type->isReference() && struct_type->base_type->isReference()) {
-            struct_type = struct_type->base_type;
-            Operand next_addr = Operand::Addr(next_temp++);
-            emit_load(base_addr, next_addr);
-            base_addr = next_addr;
-        }
 
         if(ma->offset > 0){
             Operand member_addr = Operand::Addr(next_temp++);
