@@ -187,5 +187,9 @@ assert "fn main() -> i8 { let x: i8 = 10; return x; }" 10
 assert "fn main() -> i8 { let a: i8 = 20; let b: i8 = a + 22; return b; }" 42
 assert "fn foo(x: i8) -> i8 { let y: i8 = x + 5; return y; } fn main() -> i8 { return foo(37); }" 42
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rx = &p.x; let ry = &p.y; rx = 50; return rx + ry; }" 70
+
+assert "fn inc(r: &i8) -> i8 { r = r + 1; return r; } fn main() -> i8 { let x: i8 = 41; inc(&x); return x; }" 42
+assert "struct Point { x: i8, y: i8 }; fn sum(p: &Point) -> i8 { return p.x + p.y; } fn main() -> i8 { let p: Point; p.x = 10; p.y = 32; return sum(&p); }" 42
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 
