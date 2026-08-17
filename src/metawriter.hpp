@@ -22,6 +22,7 @@ class MetaWriter {
     void writePrivate();
     void writeFunctionDeclare(Symbol& sym);
     void writeStructDeclare(Symbol& sym);
+    void writeMethodDeclare(Symbol& method, std::string strct_name);
 
 public:
     MetaWriter(ErrorReporter& reporter, const std::string& srcname) : reporter(reporter), srcname(srcname), meta_filename(srcname + ".meta") {}

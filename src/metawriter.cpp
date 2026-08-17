@@ -63,6 +63,21 @@ void MetaWriter::writeFunctionDeclare(Symbol& sym){
     out << ") -> " << sym.type_info->name << ";\n";
 }
 
+void MetaWriter::writeMethodDeclare(Symbol& method, std::string strct_name){
+    // remove "<struct>__" from method name
+    std::string method_name = method.name.substr(strct_name.size() + 2);
+
+    out << "fn " << method_name << "(";
+    for(size_t i = 0; i < method.params.size(); i++){
+        auto param = method.params[i];
+        out << param->name << ": " << param->type_info->name;
+        if(i < method.params.size() - 1){
+            out << ", ";
+        }
+    }
+    out << ") -> " << method.type_info->name << ";\n";
+}
+
 void MetaWriter::writeStructDeclare(Symbol& sym){
     out << "struct " << sym.name << " {\n";
     for(auto [name, member] : sym.type_info->scope->symbols){
@@ -74,7 +89,7 @@ void MetaWriter::writeStructDeclare(Symbol& sym){
         if(member.kind == Symbol::VARIABLE){
             out << name << ": " << member.type_info->name << ";\n";
         } else if(member.kind == Symbol::FUNCTION){
-            writeFunctionDeclare(member);
+            writeMethodDeclare(member, sym.name);
         }
     }
     out << "};\n";
