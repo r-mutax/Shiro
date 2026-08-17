@@ -337,7 +337,8 @@ bool Semantics::checkNode(ASTNode* node) {
             if (uo->op.type == Token::NOT) {
                 uo->evaluated_type = i64_t;
             } else if(uo->op.type == Token::AND){
-                if(uo->value->kind != ASTNode::NODE_VARIABLE){
+                if(uo->value->kind != ASTNode::NODE_VARIABLE &&
+                    uo->value->kind != ASTNode::NODE_MEMBER_ACCESS){
                     error(uo->loc, "Left value of '&' is not a variable.");
                     return false;
                 }

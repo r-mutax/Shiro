@@ -270,6 +270,7 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
                     "'not found in symbol map");
             }
             if(var->evaluated_type->isReference()){
+                value.type = Operand::to_operand_type(var->evaluated_type->base_type);
                 emit_store(value, it->second);
             }
             else {
@@ -440,9 +441,6 @@ Operand IRGenerator::gen_lval(ASTNode* node){
     } else if(node->kind == ASTNode::NODE_MEMBER_ACCESS){
         MemberAccessNode* ma = static_cast<MemberAccessNode*>(node);
         Operand base_addr = gen_lval(ma->struct_expr);
-
-        const Type* struct_type = ma->struct_expr->evaluated_type;
-
         if(ma->offset > 0){
             Operand member_addr = Operand::Addr(next_temp++);
             emit_add(member_addr, base_addr, Operand::IntVal((ma->offset)));

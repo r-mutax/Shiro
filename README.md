@@ -127,8 +127,8 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Defines a compound data structure with named members and methods. Methods defined inside structs implicitly receive a first parameter `this: &StructName` (a reference to the struct instance) and are mangled as `StructName__methodName`.
 *   **Member Access & Method Calls**: `<expr>.<member>` / `<expr>.<method>(<args...>)`
     *   Accesses a member or invokes a method on a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x` or `rp.double()`).
-*   **Reference Types & Address Operator**: `&<type>` / `&<variable>`
-    *   Takes the memory address of an lvalue variable. Reference creation and binding is only allowed in declaration initializers (`let rx = &x;` or `let rx: &i8 = &x;`). Attempting to bind a reference to an uninitialized `unknown` variable via assignment is prohibited.
+*   **Reference Types & Address Operator**: `&<type>` / `&<variable_or_member>`
+    *   Takes the memory address of an lvalue variable or struct member. Reference creation and binding is only allowed in declaration initializers (`let rx = &x;`, `let rx = &p.x;` or `let rx: &i8 = &x;`). Attempting to bind a reference to an uninitialized `unknown` variable via assignment is prohibited.
     *   Applying `&` to a reference variable `rx` (`&rx`) does not create a double reference (`&&T`), but automatically flattens into a single reference `&T` to the underlying value (`let z = &rx;`).
     *   Assigning a value to a reference variable `rx = val;` mutates the underlying referenced value. Reading a reference automatically dereferences it to fetch the value.
 *   **Assignment**: `<lvalue> = <expression>`
@@ -226,6 +226,19 @@ fn main() -> i8 {
     let rrx = &rx;   // Automatically flattens into a single &i8 reference to x
     rx = 100;        // Mutates the underlying value x through reference
     rrx;             // Auto-dereferenced, evaluates to 100
+}
+```
+
+### Reference to Struct Member
+```rust
+struct Point { x: i8, y: i8 };
+fn main() -> i8 {
+    let p: Point;
+    p.x = 10;
+    p.y = 20;
+    let rx = &p.x;   // Obtains reference to struct member p.x
+    rx = 50;         // Mutates p.x via reference
+    p.x;             // Evaluates to 50
 }
 ```
 
