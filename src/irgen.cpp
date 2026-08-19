@@ -130,7 +130,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
             Operand init_val = gen_expr(vd->init_expr);
             emit_mov(temp_val, init_val);
         } else {
-            if(!vd->evaluated_type->isStruct()){
+            if(!vd->evaluated_type->isStruct() && !vd->evaluated_type->isArray()){
                 emit_mov(temp_val, Operand::IntVal(0, vd->evaluated_type));
             }
         }

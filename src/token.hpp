@@ -23,6 +23,8 @@ struct Token {
         RPAREN,      // )
         LBRACE,      // {
         RBRACE,      // }
+        LSQUARE,     // [
+        RSQUARE,     // ]
         LSHIFT,      // <<
         RSHIFT,      // >>
         AND,         // &
@@ -95,6 +97,10 @@ struct Token {
                 return "LBRACE";
             case RBRACE:
                 return "RBRACE";
+            case LSQUARE:
+                return "LSQUARE";
+            case RSQUARE:
+                return "RSQUARE";
             case LSHIFT:
                 return "LSHIFT";
             case RSHIFT:

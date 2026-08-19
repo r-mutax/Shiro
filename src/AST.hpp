@@ -13,16 +13,17 @@ struct Type {
     Scope* scope;
     int align;
 
+    int array_length = 0;
+    mutable std::unordered_map<int64_t, const Type*> array_map;
+
     const Type* base_type = nullptr;
     mutable const Type* ref_type = nullptr;
 
-    bool isStruct() const {
-        return scope != nullptr;
-    }
-    
-    bool isReference() const {
-        return base_type != nullptr;
-    }
+    bool isStruct() const { return scope != nullptr; }
+
+    bool isReference() const { return base_type != nullptr; }
+
+    bool isArray() const { return array_length != 0; }
 };
 
 struct Symbol {
@@ -34,7 +35,7 @@ struct Symbol {
     int offset = 0;
     bool pub = false;
 
-    Symbol(Kind kind, const std::string& name) : kind(kind), name(name){};
+    Symbol(Kind kind, const std::string& name) : kind(kind), name(name) {};
 };
 
 struct Scope {
@@ -91,6 +92,7 @@ struct ASTNode {
         NODE_RETURN,
         NODE_MEMBER_ACCESS,
         NODE_METHOD_CALL,
+        NODE_TYPE,
     };
 
     Kind kind;
@@ -98,6 +100,58 @@ struct ASTNode {
     SourceLoc loc;
 
     explicit ASTNode(Kind kind) : kind(kind) {}
+};
+
+struct TypeNode : public ASTNode {
+    // type_name is basic type or struct name
+    // If this node represents the array or reference,
+    // this filed means the type of the element of the array or the type of the
+    // reference
+    std::string type_name;
+
+    // If this node represents the reference, this field is true
+    bool is_reference = false;
+
+    // If this node represents the array, this field means the length of the
+    // array It will be parsed in the expression
+    ASTNode* array_length = nullptr;
+
+    ASTNode* base_type = nullptr;
+
+    bool isReference(){
+        return is_reference;
+    }
+
+    bool isArray(){
+        return array_length != nullptr;
+    }
+
+    explicit TypeNode() : ASTNode(Kind::NODE_TYPE) {}
+
+    static TypeNode* RefType(ASTNode* base_type){
+        TypeNode* base = static_cast<TypeNode*>(base_type);
+        TypeNode* node = new TypeNode();
+        node->type_name = std::string("&") + base->type_name;
+        node->is_reference = true;
+        node->base_type = base_type;
+        return node;
+    }
+    static TypeNode* ArrayType(ASTNode* base_type, ASTNode* array_length){
+        TypeNode* node = new TypeNode();
+        node->array_length = array_length;
+        node->base_type = base_type;
+        return node;
+    }
+    static TypeNode* BasicType(std::string base_type){
+        TypeNode* node = new TypeNode();
+        node->type_name = base_type;
+        return node;
+    };
+    static TypeNode* Unknown(){
+        TypeNode* node = new TypeNode();
+        node->type_name = "unknown";
+        return node;
+    }
 };
 
 struct ExpressionStatementNode : public ASTNode {
@@ -120,7 +174,7 @@ struct UnaryOpNode : public ASTNode {
     ASTNode* value;
 
     explicit UnaryOpNode(Token op, ASTNode* value)
-        : ASTNode(Kind::NODE_UNARY_OP), op(op), value(value){};
+        : ASTNode(Kind::NODE_UNARY_OP), op(op), value(value) {};
 };
 
 struct BinaryOpNode : public ASTNode {
@@ -150,23 +204,20 @@ struct BlockNode : public ASTNode {
     std::vector<ASTNode*> statements;
 
     explicit BlockNode(std::vector<ASTNode*> statements)
-        : ASTNode(Kind::NODE_BLOCK), statements(statements){};
+        : ASTNode(Kind::NODE_BLOCK), statements(statements) {};
 };
 
 struct VariableDeclareNode : public ASTNode {
     std::string name;
-    std::string type_name;
-    SourceLoc type_loc;
+    ASTNode* type_node;
 
     ASTNode* init_expr = nullptr;
 
     int symbol_id = -1;
     bool is_pub = false;
 
-    explicit VariableDeclareNode(const std::string& n, SourceLoc type_loc,
-                                 const std::string& t = "i64")
-        : ASTNode(Kind::NODE_VARIABLE_DECLARE), name(n), type_name(t),
-          type_loc(type_loc){};
+    explicit VariableDeclareNode(const std::string& n, ASTNode* type)
+        : ASTNode(Kind::NODE_VARIABLE_DECLARE), name(n), type_node(type) {};
 };
 
 struct VariableNode : public ASTNode {
@@ -174,7 +225,7 @@ struct VariableNode : public ASTNode {
     int symbol_id = -1;
 
     explicit VariableNode(std::string n)
-        : ASTNode(Kind::NODE_VARIABLE), name(n){};
+        : ASTNode(Kind::NODE_VARIABLE), name(n) {};
 };
 
 struct MemberAccessNode : public ASTNode {
@@ -183,7 +234,8 @@ struct MemberAccessNode : public ASTNode {
     int offset = 0;
 
     explicit MemberAccessNode(ASTNode* struct_expr, std::string member_name)
-        : ASTNode(Kind::NODE_MEMBER_ACCESS), struct_expr(struct_expr), member_name(member_name){};
+        : ASTNode(Kind::NODE_MEMBER_ACCESS), struct_expr(struct_expr),
+          member_name(member_name) {};
 };
 
 struct FunctionCallNode : public ASTNode {
@@ -192,7 +244,7 @@ struct FunctionCallNode : public ASTNode {
     std::vector<const Type*> param_types;
 
     explicit FunctionCallNode(std::string fn_name, std::vector<ASTNode*> args)
-        : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name), args(args){};
+        : ASTNode(Kind::NODE_FUNCTION_CALL), fn_name(fn_name), args(args) {};
 };
 
 struct MethodCallNode : public ASTNode {
@@ -200,9 +252,11 @@ struct MethodCallNode : public ASTNode {
     std::string method_name;
     std::vector<ASTNode*> args;
     std::vector<const Type*> param_types;
-    
-    explicit MethodCallNode(ASTNode* object, std::string method_name, std::vector<ASTNode*> args)
-        : ASTNode(Kind::NODE_METHOD_CALL), object(object), method_name(method_name), args(args){};
+
+    explicit MethodCallNode(ASTNode* object, std::string method_name,
+                            std::vector<ASTNode*> args)
+        : ASTNode(Kind::NODE_METHOD_CALL), object(object),
+          method_name(method_name), args(args) {};
 };
 
 struct IfNode : public ASTNode {
@@ -213,7 +267,7 @@ struct IfNode : public ASTNode {
     explicit IfNode(ASTNode* condition, ASTNode* then_block,
                     ASTNode* else_block)
         : ASTNode(Kind::NODE_IF), condition(condition), then_block(then_block),
-          else_block(else_block){};
+          else_block(else_block) {};
 };
 
 struct WhileNode : public ASTNode {
@@ -221,38 +275,38 @@ struct WhileNode : public ASTNode {
     ASTNode* body;
 
     explicit WhileNode(ASTNode* condition, ASTNode* body)
-        : ASTNode(Kind::NODE_WHILE), condition(condition), body(body){};
+        : ASTNode(Kind::NODE_WHILE), condition(condition), body(body) {};
 };
 
 struct ReturnNode : public ASTNode {
     ASTNode* expr;
 
     explicit ReturnNode(ASTNode* expr)
-        : ASTNode(Kind::NODE_RETURN), expr(expr){};
+        : ASTNode(Kind::NODE_RETURN), expr(expr) {};
 };
 
 struct StructDefinitionNode : public ASTNode {
     std::string strct_name;
     std::vector<ASTNode*> members;
 
-    explicit StructDefinitionNode(std::string strct_name, std::vector<ASTNode*> members)
-        : ASTNode(Kind::NODE_STRUCT_DEFINITION), strct_name(strct_name), members(members){};
+    explicit StructDefinitionNode(std::string strct_name,
+                                  std::vector<ASTNode*> members)
+        : ASTNode(Kind::NODE_STRUCT_DEFINITION), strct_name(strct_name),
+          members(members) {};
 };
 
 struct FunctionDefinitionNode : public ASTNode {
     std::string fn_name;
-    std::string type_name;
+    ASTNode* return_type_node;
     std::vector<ASTNode*> params;
     BlockNode* body;
-    SourceLoc type_loc;
     bool is_pub = false;
 
-    explicit FunctionDefinitionNode(std::string fn_name, std::string type_name,
+    explicit FunctionDefinitionNode(std::string fn_name, ASTNode* type_node,
                                     std::vector<ASTNode*> params,
-                                    BlockNode* body, SourceLoc type_loc)
+                                    BlockNode* body)
         : ASTNode(Kind::NODE_FUNCTION_DEFINITION), fn_name(fn_name),
-          type_name(type_name), params(params), body(body), type_loc(type_loc) {
-    }
+          return_type_node(type_node), params(params), body(body) {}
 };
 
 struct TranslationUnitNode : public ASTNode {

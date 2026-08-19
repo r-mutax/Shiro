@@ -27,25 +27,31 @@ ASTNode* Parser::parseDefinition() {
 }
 
 
-std::pair<std::string, SourceLoc> Parser::parseTypeName(){
-    std::string prefix = "";
+ASTNode* Parser::parseTypeName(){
     SourceLoc loc = stream.peek().loc;
-    while (true) {
-        if (stream.peek().type == Token::AND) {
-            stream.next();
-            prefix += "&";
-        } else if (stream.peek().type == Token::AND_AND) {
-            stream.next();
-            prefix += "&&"; // Token::AND_AND なら & 2個分として扱う
-        } else {
-            break;
-        }
+
+    if(stream.consume(Token::AND)){
+        auto ref_node = TypeNode::RefType(parseTypeName());
+        ref_node->loc = loc;
+        return ref_node;
     }
+
+    if(stream.consume(Token::LSQUARE)){
+        ASTNode* size_expr = parseExpression();
+        expect(Token::RSQUARE, "Expected ']' after array size.");
+        ASTNode* base_type = parseTypeName();
+        auto node = TypeNode::ArrayType(base_type, size_expr);
+        node->loc = loc;
+        return node;
+    }
+
     Token type_tok = stream.next();
-    if (!type_tok.isTypeCandidate()) {
+    if(!type_tok.isTypeCandidate()){
         error(type_tok.loc, "Expected type name, but got " + type_tok.value);
     }
-    return {prefix + type_tok.value, loc};
+    auto basic_node = TypeNode::BasicType(type_tok.value);
+    basic_node->loc = loc;
+    return basic_node;
 }
 
 ASTNode* Parser::parseFunctionDefinition() {
@@ -68,14 +74,12 @@ ASTNode* Parser::parseFunctionDefinition() {
                   "Expected IDENT for function parameter " + token.value);
         }
 
-        std::string type_name = "unknown";
-        SourceLoc loc;
+        ASTNode* type_node = TypeNode::Unknown();
+
         if (stream.consume(Token::COLON)) {
-            auto [type_name_val, type_loc] = parseTypeName();
-            type_name = type_name_val;
-            loc = type_loc;
+            type_node = parseTypeName();
         }
-        auto vd = new VariableDeclareNode(token.value, loc, type_name);
+        auto vd = new VariableDeclareNode(token.value, type_node);
         vd->loc = token.loc;
         params.push_back(vd);
     }
@@ -83,13 +87,13 @@ ASTNode* Parser::parseFunctionDefinition() {
     expect(Token::ARROW, "Expected '->' after function parameters.");
 
     // check token is type name candidate (keyword or IDENT)
-    auto [type_name_func, type_loc_func] = parseTypeName();
+    ASTNode* return_type_node = parseTypeName();
 
     ASTNode* block = parseBlock();
 
     auto fn =
-        new FunctionDefinitionNode(fname.value, type_name_func, params,
-                                   static_cast<BlockNode*>(block), type_loc_func);
+        new FunctionDefinitionNode(fname.value, return_type_node, params,
+                                   static_cast<BlockNode*>(block));
     fn->loc = fname.loc;
     return fn;
 }
@@ -125,9 +129,9 @@ ASTNode* Parser::parseStructDefinition(){
             Token token = stream.next();
             expect(Token::COLON, "Expected ':' after struct member name.");
 
-            auto [type_name_field, type_loc_field] = parseTypeName();
+            ASTNode* type_node = parseTypeName();
             
-            auto vd = new VariableDeclareNode(token.value, type_loc_field, type_name_field);
+            auto vd = new VariableDeclareNode(token.value, type_node);
             vd->loc = token.loc;
             vd->is_pub = is_pub;
             members.push_back(vd);
@@ -158,15 +162,12 @@ ASTNode* Parser::parseVariableDeclare() {
         error(vname.loc, "Expected IDENT after let, but got " + vname.value);
     }
 
-    std::string type_name = "unknown";
-    Token type_tok;
+    ASTNode* type_node = TypeNode::Unknown();
     if (stream.consume(Token::COLON)) {
-        auto [type_name_let, type_loc_let] = parseTypeName();
-        type_name = type_name_let;
-        type_tok.loc = type_loc_let;
+        type_node = parseTypeName();
     }
 
-    auto vd = new VariableDeclareNode(vname.value, type_tok.loc, type_name);
+    auto vd = new VariableDeclareNode(vname.value, type_node);
     vd->loc = vname.loc;
 
     if(stream.consume(Token::EQUAL)){

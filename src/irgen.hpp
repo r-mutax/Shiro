@@ -36,7 +36,7 @@ struct Operand {
 
         return OperandType{.bytes = type->size, .align = type->align,
                            .isUnsigned = type->isUnsigned,
-                           .force_spill = (type->scope != nullptr)};
+                           .force_spill = (type->isStruct() || type->isArray())};
     }
 
     static Operand Temp(int id, const Type* type) {

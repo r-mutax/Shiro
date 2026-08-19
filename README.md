@@ -124,7 +124,7 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 *   **Type Inferred Declaration**: `let <variable_name> [= <expression>];`
     *   Declares a variable without a type annotation. If an initialization expression is provided, its type is automatically inferred. Without an initializer, the type is initially `unknown` and fixed upon its first assignment (`x = expr`).
 *   **Struct Definitions**: `struct <Name> { <field1>: <type1>, <field2>: <type2>, fn <method>(...) -> <type> { ... } };`
-    *   Defines a compound data structure with named members and methods. Methods defined inside structs implicitly receive a first parameter `this: &StructName` (a reference to the struct instance) and are mangled as `StructName__methodName`.
+    *   Defines a compound data structure with named members and methods. Methods defined inside structs implicitly receive a first parameter `self: &StructName` (a reference to the struct instance) and are mangled as `StructName__methodName`.
 *   **Member Access & Method Calls**: `<expr>.<member>` / `<expr>.<method>(<args...>)`
     *   Accesses a member or invokes a method on a struct instance or a reference to a struct. Automatically dereferences reference types if accessed via a reference (`rp.x` or `rp.double()`).
 *   **Reference Types & Address Operator**: `&<type>` / `&<variable_or_member>`
@@ -269,7 +269,7 @@ struct Point {
     y: i64,
 
     fn double() -> i64 {
-        return this.x * 2;
+        return self.x * 2;
     }
 };
 

@@ -146,6 +146,14 @@ TokenStream Lexer::lex_src(std::string_view src) {
                 create_token(Token::RBRACE, i, "}");
                 break;
             }
+            case '[': {
+                create_token(Token::LSQUARE, i, "[");
+                break;
+            }
+            case ']': {
+                create_token(Token::RSQUARE, i, "]");
+                break;
+            }
             case '<': {
                 if (i + 1 < len && src[i + 1] == '<') {
                     create_token(Token::LSHIFT, i, "<<");

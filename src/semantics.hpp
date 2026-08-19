@@ -76,6 +76,7 @@ class Semantics {
                                bool isUnsigned);
     const Type* make_struct(const std::string& name, const Scope* cs);
     const Type* make_reference(const Type* t);
+    const Type* make_array(const Type* base_type, const int64_t len);
     void init_builtins();
 
     const Type* i8_t = nullptr;

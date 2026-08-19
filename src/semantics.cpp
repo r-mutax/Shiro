@@ -34,10 +34,44 @@ bool Semantics::checkNode(ASTNode* node) {
             }
             break;
         }
+        case ASTNode::NODE_TYPE: {
+            auto* tn = static_cast<TypeNode*>(node);
+            if(tn->isReference()){
+                if(!checkNode(tn->base_type)) return false;
+                auto* bt = static_cast<TypeNode*>(tn->base_type);
+                tn->evaluated_type = make_reference(bt->evaluated_type);
+            } else if(tn->isArray()) {
+                if(!checkNode(tn->base_type)) return false;
+                if(tn->array_length->kind != ASTNode::NODE_INTEGER){
+                    // now shiro support only const integer literal as array length.
+                    // but in the future, shiro will support const variable as array length.
+                    error(tn->array_length->loc, "Array length must be an integer.");
+                    return false;
+                }
+                if(!checkNode(tn->array_length)) return false;
+
+                auto* base_type = static_cast<TypeNode*>(tn->base_type);
+
+                NumberNode* num = static_cast<NumberNode*>(tn->array_length);
+                int64_t len = num->value;
+                if(len <= 0){
+                    error(tn->loc, "Array length must be positive.");
+                    return false;
+                }
+
+                tn->evaluated_type = make_array(base_type->evaluated_type, len);
+            } else {
+                auto* bt = resolveType(tn->type_name, tn->loc);
+                if(!bt) return false;
+                tn->evaluated_type = bt;
+            }
+            break;
+        }
         case ASTNode::NODE_FUNCTION_DEFINITION: {
             auto* fd = static_cast<FunctionDefinitionNode*>(node);
 
-            const Type* ret_type = resolveType(fd->type_name, fd->type_loc);
+            if(!checkNode(fd->return_type_node)) return false;
+            const Type* ret_type = fd->return_type_node->evaluated_type;
 
             Symbol* func_sym = declare_function(fd->fn_name, ret_type);
             if (func_sym == nullptr) {
@@ -98,8 +132,10 @@ bool Semantics::checkNode(ASTNode* node) {
                     auto* fd = static_cast<FunctionDefinitionNode*>(it);
                     fd->fn_name = strct->strct_name + "__" + fd->fn_name;
                     
+                    TypeNode* self_type = TypeNode::RefType(TypeNode::BasicType(strct->strct_name));
+
                     fd->params.insert(fd->params.begin(), 
-                        new VariableDeclareNode("this", fd->type_loc, "&" + strct->strct_name)
+                        new VariableDeclareNode("self", self_type)
                     );
 
                     if(!checkNode(it)) return false;                
@@ -176,9 +212,12 @@ bool Semantics::checkNode(ASTNode* node) {
         case ASTNode::NODE_VARIABLE_DECLARE: {
             auto* vd = static_cast<VariableDeclareNode*>(node);
 
-            const Type* var_type = resolveType(vd->type_name, vd->type_loc);
-            if(var_type == nullptr) return false;
+            if(vd->type_node != nullptr) {
+                if(!checkNode(vd->type_node)) return false;
+                vd->evaluated_type = vd->type_node->evaluated_type;
+            }
 
+            const Type* var_type = vd->evaluated_type;
             Symbol* sym = declare_variable(vd->name, var_type);
             if (sym == nullptr) {
                 error(vd->loc, "Variable '{}' is already declared", vd->name);
@@ -617,4 +656,24 @@ const Type* Semantics::make_reference(const Type* t){
 
     t->ref_type = alloc_type(ref);
     return t->ref_type;
+}
+
+const Type* Semantics::make_array(const Type* base_type, const int64_t len){
+    if(base_type == nullptr) return nullptr;
+    
+    auto it = base_type->array_map.find(len);
+    if(it != base_type->array_map.end()){
+        return it->second;
+    }
+
+    Type array;
+    array.name = "[" + std::to_string(len) + "]" + base_type->name;
+    array.size = base_type->size * len;
+    array.align = base_type->align;
+    array.array_length = len;
+    array.base_type = base_type;
+    
+    const Type* array_ptr = alloc_type(array);
+    base_type->array_map[len] = array_ptr;
+    return array_ptr;
 }
