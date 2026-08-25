@@ -417,6 +417,33 @@ bool Semantics::checkNode(ASTNode* node) {
             mc->evaluated_type = sym->type_info;
             return true;
         }
+        case ASTNode::NODE_INDEX_ACCESS: {
+            auto* ia = static_cast<IndexAccessNode*>(node);
+            if(!checkNode(ia->slice)) return false;
+            if(!checkNode(ia->element_index)) return false;
+
+            const Type* slice_type = ia->slice->evaluated_type;
+            if(slice_type && slice_type->isReference()){
+                slice_type = slice_type->base_type;
+            }
+            if(!slice_type->isArray()){
+                error(ia->slice->loc, "Not an array");
+                return false;
+            }
+
+            if(isAutoCastInteger(ia->element_index)){
+                ia->element_index->evaluated_type = i64_t;
+            }
+
+            if(ia->element_index->evaluated_type != i64_t){
+                error(ia->element_index->loc, "Index must be an integer");
+                return false;
+            }           
+
+            ia->fix_length = ia->slice->evaluated_type->array_length;
+            ia->evaluated_type = slice_type->base_type;
+            return true;
+        }
         case ASTNode::NODE_RETURN: {
             auto* rs = static_cast<ReturnNode*>(node);
 
@@ -458,7 +485,8 @@ bool Semantics::checkNode(ASTNode* node) {
                 uo->evaluated_type = i64_t;
             } else if(uo->op.type == Token::AND){
                 if(uo->value->kind != ASTNode::NODE_VARIABLE &&
-                    uo->value->kind != ASTNode::NODE_MEMBER_ACCESS){
+                    uo->value->kind != ASTNode::NODE_MEMBER_ACCESS &&
+                    uo->value->kind != ASTNode::NODE_INDEX_ACCESS){
                     error(uo->loc, "Left value of '&' is not a variable.");
                     return false;
                 }
@@ -546,7 +574,8 @@ bool Semantics::checkNode(ASTNode* node) {
                 var_node->evaluated_type = sym->type_info;
                 var_node->symbol_id = sym->id;
                 lvalue_type = sym->type_info;
-            } else if(as->lvalue->kind == ASTNode::NODE_MEMBER_ACCESS){
+            } else if(as->lvalue->kind == ASTNode::NODE_MEMBER_ACCESS ||
+                        as->lvalue->kind == ASTNode::NODE_INDEX_ACCESS){
                 if(!checkNode(as->lvalue)) return false;
                 if(!checkNode(as->expr)) return false;
 

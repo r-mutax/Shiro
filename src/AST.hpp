@@ -8,9 +8,9 @@ struct Scope;
 
 struct Type {
     std::string name;
-    int size;
-    bool isUnsigned;
-    Scope* scope;
+    int size = 0;
+    bool isUnsigned = false;
+    Scope* scope = nullptr;
     int align;
 
     int array_length = 0;
@@ -21,7 +21,7 @@ struct Type {
 
     bool isStruct() const { return scope != nullptr; }
 
-    bool isReference() const { return base_type != nullptr; }
+    bool isReference() const { return base_type != nullptr && array_length == 0; }
 
     bool isArray() const { return array_length != 0; }
 };
@@ -93,6 +93,7 @@ struct ASTNode {
         NODE_MEMBER_ACCESS,
         NODE_METHOD_CALL,
         NODE_TYPE,
+        NODE_INDEX_ACCESS,
     };
 
     Kind kind;
@@ -152,6 +153,16 @@ struct TypeNode : public ASTNode {
         node->type_name = "unknown";
         return node;
     }
+};
+
+struct IndexAccessNode : public ASTNode {
+    ASTNode* slice;
+    ASTNode* element_index;
+
+    int64_t fix_length = 0;
+
+    IndexAccessNode(ASTNode* slice, ASTNode* element_index)
+        : ASTNode(Kind::NODE_INDEX_ACCESS), slice(slice), element_index(element_index) {}
 };
 
 struct ExpressionStatementNode : public ASTNode {

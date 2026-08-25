@@ -182,6 +182,11 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
         } else {
             return it->second;
         }
+    } else if (node->kind == ASTNode::NODE_INDEX_ACCESS) {
+        Operand addr = gen_lval(node);
+        Operand val = Operand::Temp(next_temp++, node->evaluated_type);
+        emit_load(addr, val);
+        return val;
     } else if (node->kind == ASTNode::NODE_FUNCTION_CALL) {
         FunctionCallNode* fc = static_cast<FunctionCallNode*>(node);
 
@@ -461,6 +466,18 @@ Operand IRGenerator::gen_lval(ASTNode* node){
             return member_addr;
         }
         return base_addr;
+    } else if(node->kind == ASTNode::NODE_INDEX_ACCESS){
+        IndexAccessNode* ia = static_cast<IndexAccessNode*>(node);
+        Operand slice_addr = gen_lval(ia->slice);
+
+        Operand index = gen_expr(ia->element_index);
+        Operand element_size = Operand::IntVal(ia->evaluated_type->size);
+        Operand offset = Operand::Addr(next_temp++);
+        emit_mul(offset, index, element_size);
+        
+        Operand element_addr = Operand::Addr(next_temp++);
+        emit_add(element_addr, slice_addr, offset);
+        return element_addr;
     }
     fatal("Expected lvalue");
 }

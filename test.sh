@@ -200,5 +200,10 @@ assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10;
 assert "fn inc(r: &i8) -> i8 { r = r + 1; return r; } fn main() -> i8 { let x: i8 = 41; inc(&x); return x; }" 42
 assert "struct Point { x: i8, y: i8 }; fn sum(p: &Point) -> i8 { return p.x + p.y; } fn main() -> i8 { let p: Point; p.x = 10; p.y = 32; return sum(&p); }" 42
 
+assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; arr[1] = 20; arr[2] = 30; return arr[0] + arr[2]; }" 40
+assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; let r0 = &arr; r0[0] = 99; return arr[0]; }" 99
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[1].x = 10; pts[1].y = 20; return pts[1].x + pts[1].y; }" 30
+assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[0].x = 40; let rp = &pts[0]; rp.y = 2; return pts[0].x + pts[0].y; }" 42
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

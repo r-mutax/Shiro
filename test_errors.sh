@@ -88,4 +88,8 @@ assert_error "fn main() -> i64 { return 10 / (5 - 5); }" "Division by zero"
 assert_error "fn main() -> i8 { let x = 'A; }" "Expected ''' at the end of character literal"
 assert_error "fn main() -> i8 { let x = '\\x'; }" "Unknown escape sequence: \\x"
 
+assert_error "fn main() -> i8 { let x: i8 = 10; x[0]; }" "Not an array"
+assert_error "struct Point { x: i8 }; fn main() -> i8 { let arr: [5]i8; let p: Point; arr[p]; }" "Index must be an integer"
+assert_error "fn main() -> i8 { let arr: [0]i8; }" "Array length must be positive"
+
 echo -e "\e[32mAll error diagnostic tests passed successfully!\e[0m"

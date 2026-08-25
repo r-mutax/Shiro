@@ -398,6 +398,13 @@ ASTNode* Parser::parsePostfix(){
                 lhs = new MemberAccessNode(lhs, member.value);
                 lhs->loc = tok.loc;
             }
+        } else if (tok.type == Token::LSQUARE) {
+            stream.next();
+            ASTNode* index = parseExpression();
+            expect(Token::RSQUARE, "Expected ']' after index.");
+
+            lhs = new IndexAccessNode(lhs, index);
+            lhs->loc = tok.loc;
         } else {
             break;
         }
