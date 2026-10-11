@@ -57,10 +57,9 @@ X86RegAllocState X86Generator::alloc_registers(const IRFunction& func) {
             regalloc_state.temp_to_reg[op.temp_id] = -1;
 
             regalloc_state.spill_offset = regalloc_state.align_to(
-                regalloc_state.spill_offset, type.align);
+                regalloc_state.spill_offset + type.bytes, type.align);
             regalloc_state.temp_to_stack_offset[op.temp_id] =
                 regalloc_state.spill_offset;
-            regalloc_state.spill_offset += type.bytes;
         }
     };
 

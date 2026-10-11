@@ -199,7 +199,7 @@ struct X86RegAllocState {
 
     // stack offset for spill
     std::vector<int> temp_to_stack_offset;
-    int spill_offset = 8;
+    int spill_offset = 0;
 };
 
 struct X86GeneratorError {};
