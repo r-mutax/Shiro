@@ -113,6 +113,20 @@ IRFunction IRGenerator::gen_function(ASTNode* node) {
         }
     }
 
+    // A temp that is live across a CALL must not sit in a caller-saved
+    // register (r10/r11): the callee may clobber those without saving
+    // them. Spill such temps to the stack, as is already done for ADDR.
+    for (size_t i = 0; i < instructions.size(); i++) {
+        if (instructions[i].op == IRInstruction::CALL) {
+            for (auto& info : func.temp_reg_infos) {
+                if (info.start != -1 && info.start < (int)i &&
+                    info.end > (int)i) {
+                    info.type.force_spill = true;
+                }
+            }
+        }
+    }
+
     return func;
 }
 
