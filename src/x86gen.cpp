@@ -9,6 +9,10 @@ void X86Generator::generate() {
     for (auto& func : program.functions) {
         gen_function(func);
     }
+
+    // Mark the stack as non-executable. Without this note section,
+    // the linker warns that the stack is executable.
+    out << ".section .note.GNU-stack,\"\",@progbits" << std::endl;
 }
 
 X86RegAllocState X86Generator::alloc_registers(const IRFunction& func) {
