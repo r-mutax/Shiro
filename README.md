@@ -1,8 +1,26 @@
 # Shiro Language Specification
 
+[![CI](https://github.com/r-mutax/Shiro/actions/workflows/ci.yml/badge.svg)](https://github.com/r-mutax/Shiro/actions/workflows/ci.yml)
+
 [日本語版はこちら (README.ja.md)](./README.ja.md)
 
 Shiro is a procedural programming language featuring a primitive integer and reference type system, user-defined structs, type inference, control flow expressions, explicit return statements, and function definitions with parameters.
+
+## Building and Testing
+
+Requirements: Linux with `g++-13`, `make`, and `gcc` (used to assemble and link the generated assembly).
+
+```bash
+# Build the compiler (produces ./shiro)
+make
+
+# Compile a Shiro program to an executable
+./shiro hello.shiro -o hello.s
+gcc -no-pie hello.s -o hello
+
+# Run the test suite (test.sh, test_errors.sh, test_meta.sh)
+make test
+```
 
 ## 1. Specifications
 *   **Data Types**:
@@ -10,6 +28,7 @@ Shiro is a procedural programming language featuring a primitive integer and ref
     *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
     *   Reference types: `&T` (e.g. `&i8`, `&Point`). References are created via initializers `let rx = &x;`, and multiple references `&rx` automatically flatten into a single reference `&T` to the underlying value.
     *   User-defined Structs: `struct StructName { member: Type, ... };` (Methods can be defined inside `struct` body)
+    *   Array types: `[N]T` (e.g. `[3]i64`) can be used in declarations, but element access (`a[i]`) is not implemented yet.
 *   **Type Inference**:
     *   Variables declared without an explicit type annotation or initialization (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
     *   However, reference binding is only permitted via initializers (`let rx = &x;`). Attempting to infer a reference type for an `unknown` variable via assignment is prohibited.
