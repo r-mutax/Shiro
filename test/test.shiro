@@ -1,4 +1,0 @@
-fn func () -> i8 {
-    let x
-    let y
-}

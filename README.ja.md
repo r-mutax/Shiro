@@ -1,8 +1,26 @@
 # Shiro 言語仕様書
 
+[![CI](https://github.com/r-mutax/Shiro/actions/workflows/ci.yml/badge.svg)](https://github.com/r-mutax/Shiro/actions/workflows/ci.yml)
+
 [English version (README.md)](./README.md)
 
 Shiro は、整数型および参照型システム、ユーザー定義構造体、型推論、制御構文（式）、明示的な return 文、および引数付き関数定義を備えた手続き型プログラミング言語およびそのコンパイラです。
+
+## ビルドとテスト
+
+必要なもの: Linux、`g++-13`、`make`、`gcc`（生成されたアセンブリのビルドに使用）。
+
+```bash
+# コンパイラをビルド（./shiro が生成される）
+make
+
+# Shiro プログラムを実行ファイルにコンパイル
+./shiro hello.shiro -o hello.s
+gcc -no-pie hello.s -o hello
+
+# テストスイートを実行（test.sh, test_errors.sh, test_meta.sh）
+make test
+```
 
 ## 1. 基本仕様
 *   **データ型**:
@@ -10,6 +28,7 @@ Shiro は、整数型および参照型システム、ユーザー定義構造�
     *   符号なし整数型: `u8`, `u16`, `u32`, `u64`
     *   参照型: `&T` （例: `&i8`, `&Point`）。参照は初期化式 `let rx = &x;` で生成され、多重参照 `&rx` は同一実体を指す一重参照 `&T` に自動平坦化されます。
     *   ユーザー定義構造体: `struct 構造体名 { メンバ: 型, ... };` （構造体ブロック内に `fn` メソッドを定義可能）
+    *   配列型: `[N]T`（例: `[3]i64`）は宣言に使えますが、要素アクセス（`a[i]`）は未実装です。
 *   **型推論 (Type Inference)**:
     *   型を明示しない変数宣言 (`let x;`) で初期化式がない場合、変数は最初 `unknown` 型（未決定）となり、最初の代入 (`x = expr`) のタイミングで右辺の型が自動適用・固定化されます。
     *   ただし、参照型の生成・設定は初期化式 (`let rx = &x;`) でのみ可能であり、代入文で `unknown` 変数を参照型に推論させることはできません。
