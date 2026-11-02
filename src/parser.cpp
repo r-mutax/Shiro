@@ -352,7 +352,18 @@ ASTNode* Parser::parseUnary() {
     if (tok.type == Token::NOT || tok.type == Token::CHILDA ||
         tok.type == Token::MINUS || tok.type == Token::AND) {
         stream.next();
-        auto unary = new UnaryOpNode(tok, parseUnary());
+        ASTNode* operand = parseUnary();
+        if (tok.type == Token::MINUS &&
+            operand->kind == ASTNode::NODE_INTEGER) {
+            // Fold a negated integer literal into a negative literal so
+            // it gets the same expected-type propagation as a positive
+            // literal (e.g. `let x: i8 = -56;`).
+            auto* num = static_cast<NumberNode*>(operand);
+            num->value = -num->value;
+            num->loc = tok.loc;
+            return num;
+        }
+        auto unary = new UnaryOpNode(tok, operand);
         unary->loc = tok.loc;
         return unary;
     }
