@@ -79,6 +79,11 @@ assert_error "fn main() -> i8 { 1 = 2; }" "Left value of assignment is not a var
 assert_error "fn main() -> i8 { let x: i8; let y: i32; x = y; }" "Type mismatch in assignment. Left: 'i8', Right: 'i32'"
 assert_error "fn main() -> i8 { if (1) { let x: i8; x = 1; x; } else { let y: i32; y = 2; y; }; }" "Type mismatch between 'then' and 'else' branches. Then: 'i8', Else: 'i32'"
 assert_error "fn foo(r: &i8) -> i8 { return r; } fn main() -> i8 { let x: i8 = 10; return foo(x); }" "Type mismatch in argument 1 of function 'foo'"
+# --- Division by Constant Zero ---
+assert_error "fn main() -> i64 { return 10 / 0; }" "Division by zero"
+assert_error "fn main() -> i64 { return 10 % 0; }" "Modulo by zero"
+assert_error "fn main() -> i64 { return 10 / (5 - 5); }" "Division by zero"
+
 # --- Character Literal Errors ---
 assert_error "fn main() -> i8 { let x = 'A; }" "Expected ''' at the end of character literal"
 assert_error "fn main() -> i8 { let x = '\\x'; }" "Unknown escape sequence: \\x"

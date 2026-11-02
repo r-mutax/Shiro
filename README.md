@@ -153,7 +153,10 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 *   **Assignment**: `<lvalue> = <expression>`
     *   Assignment is treated as an expression, returning the assigned value itself. Since it is right-associative, chained assignment like `y = x = 10` is supported.
     *   Assigning a value of a mismatched type to an already typed variable results in a compile-time type mismatch error.
-*   **Scope**: 
+*   **Division and Modulo**: `<expr> / <expr>`, `<expr> % <expr>`
+    *   A divisor that is a compile-time constant zero is a compile error.
+    *   If the divisor becomes zero at run time, the behavior is undefined: the generated code executes the division as-is, and the program may terminate abnormally (e.g. with SIGFPE on x86-64).
+*   **Scope**:
     *   Variables are scoped to the block `{ ... }` (or function scope) where they are declared.
     *   Declaring a variable inside an inner block with the same name shadows the outer variable.
 *   **Block Expression**: `{ stmt1; stmt2; ... }`
