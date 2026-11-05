@@ -99,6 +99,12 @@ assert "fn main() -> i8 {let x; x = 0; while(x != 0) { x = 99; } x;}" 0
 # Temps live across a call must survive the call (regression: caller-saved clobber)
 assert "fn f(x: i64) -> i64 { return x + 1; } fn main() -> i64 { let n: i64 = 10; return f(n - 1) + f(n - 2); }" 19
 assert "fn fib(n: i64) -> i64 { if (n < 2) { return n; } return fib(n - 1) + fib(n - 2); } fn main() -> i64 { return fib(10); }" 55
+# Negative literals get the same expected-type propagation as positive ones
+assert "fn main() -> i8 { let x: i8 = -56; return x + 100; }" 44
+assert "fn main() -> i16 { let x: i16 = -1000; return x + 2000; }" 232
+assert "fn main() -> i8 { let x: i8; x = -56; return x + 100; }" 44
+assert "fn f(v: i8) -> i8 { return v + 100; } fn main() -> i8 { return f(-56); }" 44
+assert "fn main() -> i64 { return 10 - -3; }" 13
 assert "fn main() -> i8 {5 < 10;}" 1
 assert "fn main() -> i8 {10 < 5;}" 0
 assert "fn main() -> i8 {5 < 5;}" 0
