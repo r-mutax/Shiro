@@ -1,6 +1,87 @@
 #include "semantics.hpp"
 #include "AST.hpp"
 #include <cstddef>
+#include <cstdint>
+#include <optional>
+
+namespace {
+// Evaluate a compile-time constant integer expression, if possible.
+// Returns std::nullopt when the expression is not a constant (or its
+// value cannot be proven). Intermediate arithmetic is done in __int128
+// so the evaluation itself never overflows.
+std::optional<int64_t> evalConstInt(ASTNode* node) {
+    if (!node)
+        return std::nullopt;
+
+    switch (node->kind) {
+        case ASTNode::NODE_INTEGER:
+            return static_cast<NumberNode*>(node)->value;
+        case ASTNode::NODE_CHAR_LITERAL:
+            return static_cast<CharLiteralNode*>(node)->value;
+        case ASTNode::NODE_UNARY_OP: {
+            auto* uo = static_cast<UnaryOpNode*>(node);
+            auto v = evalConstInt(uo->value);
+            if (!v)
+                return std::nullopt;
+            switch (uo->op.type) {
+                case Token::MINUS:
+                    return static_cast<int64_t>(-static_cast<__int128>(*v));
+                case Token::CHILDA:
+                    return ~*v;
+                case Token::NOT:
+                    return *v == 0 ? 1 : 0;
+                default:
+                    return std::nullopt;
+            }
+        }
+        case ASTNode::NODE_BINARY_OP: {
+            auto* bo = static_cast<BinaryOpNode*>(node);
+            auto l = evalConstInt(bo->left);
+            auto r = evalConstInt(bo->right);
+            if (!l || !r)
+                return std::nullopt;
+            __int128 res;
+            switch (bo->op.type) {
+                case Token::PLUS:
+                    res = static_cast<__int128>(*l) + *r;
+                    break;
+                case Token::MINUS:
+                    res = static_cast<__int128>(*l) - *r;
+                    break;
+                case Token::ASTERISK:
+                    res = static_cast<__int128>(*l) * *r;
+                    break;
+                case Token::SLASH:
+                    if (*r == 0)
+                        return std::nullopt;
+                    res = static_cast<__int128>(*l) / *r;
+                    break;
+                case Token::MOD:
+                    if (*r == 0)
+                        return std::nullopt;
+                    res = static_cast<__int128>(*l) % *r;
+                    break;
+                case Token::AND:
+                    res = *l & *r;
+                    break;
+                case Token::OR:
+                    res = *l | *r;
+                    break;
+                case Token::HAT:
+                    res = *l ^ *r;
+                    break;
+                default:
+                    return std::nullopt;
+            }
+            if (res > INT64_MAX || res < INT64_MIN)
+                return std::nullopt;
+            return static_cast<int64_t>(res);
+        }
+        default:
+            return std::nullopt;
+    }
+}
+} // namespace
 
 bool Semantics::analyze(ASTNode* ast) {
     if (!ast) {
@@ -408,6 +489,15 @@ bool Semantics::checkNode(ASTNode* node) {
                       "Right: '{}'",
                       bo->left->evaluated_type->name,
                       bo->right->evaluated_type->name);
+            }
+
+            if (bo->op.type == Token::SLASH || bo->op.type == Token::MOD) {
+                auto divisor = evalConstInt(bo->right);
+                if (divisor && *divisor == 0) {
+                    error(bo->right->loc,
+                          bo->op.type == Token::SLASH ? "Division by zero"
+                                                      : "Modulo by zero");
+                }
             }
 
             if (bo->op.type == Token::AND_AND || bo->op.type == Token::OR_OR ||
