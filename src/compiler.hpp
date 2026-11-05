@@ -11,6 +11,7 @@ struct CompilerEnvironment {
 
     bool execute = false;
     bool emit_meta = false;
+    bool crash_trace = false;
     std::string execute_code;
 };
 

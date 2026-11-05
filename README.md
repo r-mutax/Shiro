@@ -22,6 +22,35 @@ gcc -no-pie hello.s -o hello
 make test
 ```
 
+## Crash Traces (experimental)
+
+Compiling with `--crash-trace` embeds address-to-source-location tables
+into the generated assembly. Linking the small runtime in
+`runtime/shiro_trace.c` then makes a crashing program print a
+source-level trace (signal, faulting function, and the call chain with
+`file:line` per frame) instead of dying silently:
+
+```bash
+./shiro prog.shiro --crash-trace -o prog.s
+gcc -no-pie prog.s runtime/shiro_trace.c -o prog
+```
+
+For `examples/crash_trace_demo.shiro` (a runtime division by zero,
+three frames deep) the output is:
+
+```
+shiro crash trace: SIGFPE (8), faulting instruction 0x4011b3
+  #0 boom (examples/crash_trace_demo.shiro:4)
+  #1 middle (examples/crash_trace_demo.shiro:8)
+  #2 main (examples/crash_trace_demo.shiro:12)
+  #3 <unknown> (??:0)
+```
+
+The runtime handles SIGSEGV, SIGABRT, SIGILL, and SIGFPE, prints the
+trace using only async-signal-safe calls, and then re-raises the signal
+so the process dies with its usual exit status. Without the flag, the
+generated assembly is unchanged.
+
 ## 1. Specifications
 *   **Data Types**:
     *   Signed integers: `i8`, `i16`, `i32`, `i64`

@@ -25,6 +25,8 @@ int main(int argc, const char* argv[]) {
             }
         } else if (arg == "-M" || arg == "--emit-meta") {
             compiler.env.emit_meta = true;
+        } else if (arg == "--crash-trace") {
+            compiler.env.crash_trace = true;
         } else {
             // input file
             compiler.env.input_filename = arg;

@@ -133,6 +133,10 @@ struct IRInstruction {
 
     std::vector<Operand> args;
 
+    // Source location of the AST node this instruction was generated from.
+    // Used by the x86 backend to build crash-trace location tables.
+    SourceLoc loc;
+
     std::string to_str() const {
         switch (op) {
             case MOV:
@@ -242,6 +246,7 @@ class IRFunction {
 
   public:
     std::string name;
+    SourceLoc loc;
     std::vector<Operand> param_temps;
     std::vector<std::unique_ptr<BasicBlock>> blocks;
     Operand end_label;
@@ -265,6 +270,9 @@ struct IRGeneratorError {};
 class IRGenerator {
     ErrorReporter& reporter;
     IRProgram program;
+    // Location of the AST node currently being generated; stamped onto
+    // every emitted instruction (see LocScope in irgen.cpp).
+    SourceLoc cur_loc;
     int next_temp = 0;
     int next_label = 0;
     std::vector<IRInstruction> instructions;
@@ -275,8 +283,11 @@ class IRGenerator {
     void emit(IRInstruction::Op op, Operand dst = Operand::IntVal(0),
               Operand src1 = Operand::IntVal(0),
               Operand src2 = Operand::IntVal(0)) {
-        instructions.push_back(
-            IRInstruction{.op = op, .dst = dst, .src1 = src1, .src2 = src2});
+        instructions.push_back(IRInstruction{.op = op,
+                                             .dst = dst,
+                                             .src1 = src1,
+                                             .src2 = src2,
+                                             .loc = cur_loc});
     }
 
     void emit_mov(Operand dst, Operand src) {
@@ -347,7 +358,8 @@ class IRGenerator {
         IRInstruction instr{.op = IRInstruction::CALL,
                             .dst = dst,
                             .src1 = src,
-                            .src2 = Operand::IntVal(0)};
+                            .src2 = Operand::IntVal(0),
+                            .loc = cur_loc};
         instr.args = args;
         instructions.push_back(instr);
     }

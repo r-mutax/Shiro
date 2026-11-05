@@ -208,6 +208,17 @@ class X86Generator {
     const IRProgram& program;
     ErrorReporter& reporter;
     std::ostream& out;
+
+    // Crash-trace support (--crash-trace): while generating, collect
+    // (label, line) pairs in emission order; addresses ascend with the
+    // emitted code, so the table is sorted by construction.
+    bool crash_trace = false;
+    std::string trace_source_name;
+    std::vector<std::pair<std::string, size_t>> trace_loc_entries;
+    int trace_label_count = 0;
+
+    void gen_trace_tables();
+    std::string escape_asm_string(const std::string& s);
     const std::vector<std::string> argregs = {
         "rdi", //
         "rsi", //
@@ -250,6 +261,11 @@ class X86Generator {
                  std::ostream& out = std::cout)
         : program(program), reporter(reporter), out(out) {}
     ~X86Generator() = default;
+
+    void set_crash_trace(bool enabled, std::string_view source_name) {
+        crash_trace = enabled;
+        trace_source_name = std::string(source_name);
+    }
 
     void generate();
 };

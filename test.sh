@@ -194,5 +194,39 @@ assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10;
 assert "fn inc(r: &i8) -> i8 { r = r + 1; return r; } fn main() -> i8 { let x: i8 = 41; inc(&x); return x; }" 42
 assert "struct Point { x: i8, y: i8 }; fn sum(p: &Point) -> i8 { return p.x + p.y; } fn main() -> i8 { let p: Point; p.x = 10; p.y = 32; return sum(&p); }" 42
 
+# --- Crash trace (--crash-trace) ---
+# A runtime division by zero must kill the program with SIGFPE (exit
+# 128 + 8 = 136) and the linked runtime must print a source-level
+# trace naming the faulting function and the call chain.
+cat > tmp.shiro <<'EOF'
+fn boom(x: i64) -> i64 {
+    return 100 / x;
+}
+fn middle(x: i64) -> i64 {
+    return boom(x - 3);
+}
+fn main() -> i64 {
+    return middle(3);
+}
+EOF
+./shiro tmp.shiro --crash-trace -o tmp.s
+gcc -no-pie tmp.s runtime/shiro_trace.c -o tmp_bin
+trace_output=$(./tmp_bin 2>&1)
+trace_status=$?
+trace_ok=1
+[ "$trace_status" -eq 136 ] || trace_ok=0
+echo "$trace_output" | grep -q "#0 boom (tmp.shiro:2)" || trace_ok=0
+echo "$trace_output" | grep -q "#1 middle (tmp.shiro:5)" || trace_ok=0
+echo "$trace_output" | grep -q "#2 main (tmp.shiro:8)" || trace_ok=0
+if [ "$trace_ok" -eq 1 ]; then
+    echo -e "\e[32m[OK]   \"--crash-trace\" => SIGFPE trace with file:line frames\e[0m"
+else
+    echo -e "\e[31m[FAIL] \"--crash-trace\" => status $trace_status, output:\e[0m"
+    echo "$trace_output"
+    rm -f tmp.shiro tmp.s tmp_bin
+    exit 1
+fi
+rm -f tmp.shiro tmp.s tmp_bin
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

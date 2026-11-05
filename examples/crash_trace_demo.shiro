@@ -1,0 +1,13 @@
+// Crash-trace demo: a runtime division by zero, three frames deep.
+// `middle(3)` calls `boom(0)`, and `100 / 0` raises SIGFPE.
+fn boom(x: i64) -> i64 {
+    return 100 / x;
+}
+
+fn middle(x: i64) -> i64 {
+    return boom(x - 3);
+}
+
+fn main() -> i64 {
+    return middle(3);
+}

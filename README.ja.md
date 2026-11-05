@@ -22,6 +22,35 @@ gcc -no-pie hello.s -o hello
 make test
 ```
 
+## クラッシュトレース（実験的機能）
+
+`--crash-trace` を付けてコンパイルすると、アドレスとソース位置の対応表が
+生成アセンブリに埋め込まれます。`runtime/shiro_trace.c` の小さなランタイムを
+一緒にリンクすると、プログラムがクラッシュした際に、無言で死ぬ代わりに
+ソースレベルのトレース（シグナル、落ちた関数、`file:line` 付きの呼び出し履歴）
+を表示します。
+
+```bash
+./shiro prog.shiro --crash-trace -o prog.s
+gcc -no-pie prog.s runtime/shiro_trace.c -o prog
+```
+
+`examples/crash_trace_demo.shiro`（3段の呼び出しの先で起きる実行時のゼロ除算）
+の出力は次のとおりです。
+
+```
+shiro crash trace: SIGFPE (8), faulting instruction 0x4011b3
+  #0 boom (examples/crash_trace_demo.shiro:4)
+  #1 middle (examples/crash_trace_demo.shiro:8)
+  #2 main (examples/crash_trace_demo.shiro:12)
+  #3 <unknown> (??:0)
+```
+
+ランタイムは SIGSEGV / SIGABRT / SIGILL / SIGFPE を扱い、async-signal-safe な
+呼び出しだけでトレースを表示したあと、シグナルを再送出します。そのため
+プロセスは通常どおりの終了ステータスで死にます。フラグを付けない場合、
+生成されるアセンブリは従来と変わりません。
+
 ## 1. 基本仕様
 *   **データ型**:
     *   符号付き整数型: `i8`, `i16`, `i32`, `i64`

@@ -10,9 +10,68 @@ void X86Generator::generate() {
         gen_function(func);
     }
 
+    if (crash_trace) {
+        // End-of-generated-code marker: the runtime uses it to tell
+        // "inside Shiro code" apart from libc / CRT addresses.
+        out << ".globl __shiro_text_end" << std::endl;
+        out << "__shiro_text_end:" << std::endl;
+        gen_trace_tables();
+    }
+
     // Mark the stack as non-executable. Without this note section,
     // the linker warns that the stack is executable.
     out << ".section .note.GNU-stack,\"\",@progbits" << std::endl;
+}
+
+std::string X86Generator::escape_asm_string(const std::string& s) {
+    std::string out_str;
+    for (char c : s) {
+        if (c == '"' || c == '\\') {
+            out_str += '\\';
+        }
+        out_str += c;
+    }
+    return out_str;
+}
+
+// Emit the crash-trace tables into .rodata. Layouts (consumed by
+// runtime/shiro_trace.c):
+//   loc entry: { .quad addr, .quad file_name_ptr, .long line, .long 0 }
+//   fn  entry: { .quad addr, .quad name_ptr }
+// Entries reference code labels, so addresses resolve at link time.
+void X86Generator::gen_trace_tables() {
+    out << ".section .rodata" << std::endl;
+
+    out << ".Lct_file_name:" << std::endl;
+    out << "  .asciz \"" << escape_asm_string(trace_source_name) << "\""
+        << std::endl;
+    for (size_t i = 0; i < program.functions.size(); ++i) {
+        out << ".Lct_fn_name_" << i << ":" << std::endl;
+        out << "  .asciz \"" << escape_asm_string(program.functions[i].name)
+            << "\"" << std::endl;
+    }
+
+    out << ".balign 8" << std::endl;
+    out << ".globl __shiro_loc_table" << std::endl;
+    out << "__shiro_loc_table:" << std::endl;
+    for (auto& entry : trace_loc_entries) {
+        out << "  .quad " << entry.first << std::endl;
+        out << "  .quad .Lct_file_name" << std::endl;
+        out << "  .long " << entry.second << std::endl;
+        out << "  .long 0" << std::endl;
+    }
+    out << ".globl __shiro_loc_table_end" << std::endl;
+    out << "__shiro_loc_table_end:" << std::endl;
+
+    out << ".balign 8" << std::endl;
+    out << ".globl __shiro_fn_table" << std::endl;
+    out << "__shiro_fn_table:" << std::endl;
+    for (size_t i = 0; i < program.functions.size(); ++i) {
+        out << "  .quad " << program.functions[i].name << std::endl;
+        out << "  .quad .Lct_fn_name_" << i << std::endl;
+    }
+    out << ".globl __shiro_fn_table_end" << std::endl;
+    out << "__shiro_fn_table_end:" << std::endl;
 }
 
 X86RegAllocState X86Generator::alloc_registers(const IRFunction& func) {
@@ -251,6 +310,12 @@ void X86Generator::gen_function(const IRFunction& func) {
     out << ".type " << func.name << ", @function" << std::endl;
     out << func.name << ":" << std::endl;
 
+    if (crash_trace) {
+        // Function-entry record: covers the prologue and any address in
+        // this function before its first statement label.
+        trace_loc_entries.emplace_back(func.name, func.loc.line);
+    }
+
     // NOTE: we will use stack for temporaries.
     size_t max_spill_offset = regalloc_state.spill_offset;
     size_t stack_size = max_spill_offset;
@@ -282,7 +347,15 @@ void X86Generator::gen_function(const IRFunction& func) {
         }
     }
 
+    size_t last_trace_line = 0;
     for (auto& instr : func.instructions) {
+        if (crash_trace && instr.loc.line != last_trace_line) {
+            std::string label =
+                ".Lct_" + std::to_string(trace_label_count++);
+            out << label << ":" << std::endl;
+            trace_loc_entries.emplace_back(label, instr.loc.line);
+            last_trace_line = instr.loc.line;
+        }
         gen_instruction(instr, regalloc_state);
     }
 

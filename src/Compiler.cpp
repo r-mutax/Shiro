@@ -75,6 +75,10 @@ bool Compiler::compile_src(std::string_view src) {
             }
 
             X86Generator x86_generator(ir_generator.get_program(), reporter, *out);
+            x86_generator.set_crash_trace(
+                env.crash_trace, env.input_filename.empty()
+                                     ? std::string_view("<execute>")
+                                     : std::string_view(env.input_filename));
             x86_generator.generate();
         }
 

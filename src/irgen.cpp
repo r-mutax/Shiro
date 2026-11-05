@@ -3,6 +3,18 @@
 #include <cstddef>
 #include <iostream>
 
+namespace {
+// RAII guard: while an AST node is being generated, cur_loc points at that
+// node so every emitted instruction is stamped with its source location.
+// Restores the enclosing node's location on scope exit.
+struct LocScope {
+    SourceLoc& slot;
+    SourceLoc prev;
+    LocScope(SourceLoc& s, SourceLoc l) : slot(s), prev(s) { slot = l; }
+    ~LocScope() { slot = prev; }
+};
+} // namespace
+
 bool IRGenerator::generate(ASTNode* ast) {
 
     if (ast->kind != ASTNode::NODE_TRANSLATION_UNIT) {
@@ -38,6 +50,8 @@ IRFunction IRGenerator::gen_function(ASTNode* node) {
         static_cast<FunctionDefinitionNode*>(node);
     IRFunction func;
     func.name = func_def->fn_name;
+    func.loc = node->loc;
+    LocScope func_loc(cur_loc, node->loc);
 
     instructions.clear();
     next_temp = 0;
@@ -131,6 +145,7 @@ IRFunction IRGenerator::gen_function(ASTNode* node) {
 }
 
 Operand IRGenerator::gen_stmt(ASTNode* node) {
+    LocScope stmt_loc(cur_loc, node->loc);
     if (node->kind == ASTNode::NODE_EXPRESSION_STATEMENT) {
         ExpressionStatementNode* stmt =
             static_cast<ExpressionStatementNode*>(node);
@@ -161,6 +176,7 @@ Operand IRGenerator::gen_stmt(ASTNode* node) {
 }
 
 Operand IRGenerator::gen_expr(ASTNode* node) {
+    LocScope expr_loc(cur_loc, node->loc);
     if (node->kind == ASTNode::NODE_INTEGER) {
         NumberNode* num = static_cast<NumberNode*>(node);
         return Operand::IntVal(num->value, node->evaluated_type);
@@ -436,6 +452,7 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
 }
 
 Operand IRGenerator::gen_lval(ASTNode* node){
+    LocScope lval_loc(cur_loc, node->loc);
     if(node->kind == ASTNode::NODE_VARIABLE){
         VariableNode* var = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(var->symbol_id);
