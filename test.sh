@@ -205,6 +205,13 @@ assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; let r0 = &arr; r0[0] = 99
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[1].x = 10; pts[1].y = 20; return pts[1].x + pts[1].y; }" 30
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[0].x = 40; let rp = &pts[0]; rp.y = 2; return pts[0].x + pts[0].y; }" 42
 
+# Regression tests (issue #18): arrays and references must not be confused
+assert "fn main() -> i8 { let arr: [4]i8; arr[3] = 7; let r = &arr; r[3] = r[3] + 1; return arr[3]; }" 8
+assert "fn main() -> i8 { let arr: [4]i8; arr[0] = 1; arr[3] = 9; let r = &arr; return r[0] + r[3]; }" 10
+assert "struct P { x: i8, y: i8 }; fn main() -> i8 { let a: [2]P; a[1].x = 5; a[1].y = 6; let r = &a; r[1].y = 7; return a[1].x + r[1].y; }" 12
+assert "struct P { x: i8, y: i8 }; fn main() -> i8 { let a: [2]P; a[0].x = 3; let p = &a[0]; p.y = 4; return a[0].x * a[0].y; }" 12
+assert "fn set(a: &[3]i8) -> i8 { a[2] = 21; return 0; } fn main() -> i8 { let arr: [3]i8; set(&arr); return arr[2]; }" 21
+# Forward function references (issue #2)
 assert "fn main() -> i8 { return foo(); } fn foo() -> i8 { return 42; }" 42
 assert "fn is_even(n: i8) -> i8 { if (n == 0) { return 1; } return is_odd(n - 1); } fn is_odd(n: i8) -> i8 { if (n == 0) { return 0; } return is_even(n - 1); } fn main() -> i8 { return is_even(10) + 41; }" 42
 assert "fn main() -> i8 { return calc(10, 20, 12); } fn calc(a: i8, b: i8, c: i8) -> i8 { return a + b + c; }" 42
