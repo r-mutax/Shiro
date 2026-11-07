@@ -109,7 +109,54 @@ bool Semantics::checkNode(ASTNode* node) {
     switch (node->kind) {
         case ASTNode::NODE_TRANSLATION_UNIT: {
             auto* tu = static_cast<TranslationUnitNode*>(node);
+            predeclared_funcs.clear();
+            prechecked_structs.clear();
+            placeholder_params.clear();
+
+            // Pass 1: register every top-level function signature so that
+            // calls can refer to functions defined later in the file.
+            // Structs are checked in source order here (unchanged logic) so
+            // that struct types used in signatures are already declared.
             for (auto* definition : tu->definitions) {
+                if (definition->kind == ASTNode::NODE_STRUCT_DEFINITION) {
+                    if (!checkNode(definition))
+                        return false;
+                    prechecked_structs.insert(definition);
+                } else if (definition->kind ==
+                           ASTNode::NODE_FUNCTION_DEFINITION) {
+                    auto* fd = static_cast<FunctionDefinitionNode*>(definition);
+                    if (!checkNode(fd->return_type_node))
+                        return false;
+                    const Type* ret_type = fd->return_type_node->evaluated_type;
+
+                    Symbol* func_sym = declare_function(fd->fn_name, ret_type);
+                    if (func_sym == nullptr) {
+                        error(fd->loc, "Function '{}' is already declared",
+                              fd->fn_name);
+                    }
+                    for (auto* it : fd->params) {
+                        auto* vd = static_cast<VariableDeclareNode*>(it);
+                        const Type* pt = vd->evaluated_type;
+                        if (vd->type_node != nullptr) {
+                            if (!checkNode(vd->type_node))
+                                return false;
+                            pt = vd->type_node->evaluated_type;
+                        }
+                        auto ph = std::make_unique<Symbol>(Symbol::VARIABLE,
+                                                           vd->name);
+                        ph->id = -1;
+                        ph->type_info = pt;
+                        func_sym->params.push_back(ph.get());
+                        placeholder_params.push_back(std::move(ph));
+                    }
+                    predeclared_funcs[fd] = func_sym;
+                }
+            }
+
+            // Pass 2: check everything (function bodies etc.).
+            for (auto* definition : tu->definitions) {
+                if (prechecked_structs.count(definition))
+                    continue;
                 if (!checkNode(definition))
                     return false;
             }
@@ -154,10 +201,19 @@ bool Semantics::checkNode(ASTNode* node) {
             if(!checkNode(fd->return_type_node)) return false;
             const Type* ret_type = fd->return_type_node->evaluated_type;
 
-            Symbol* func_sym = declare_function(fd->fn_name, ret_type);
-            if (func_sym == nullptr) {
-                error(fd->loc, "Function '{}' is already declared",
-                      fd->fn_name);
+            Symbol* func_sym = nullptr;
+            auto pre = predeclared_funcs.find(fd);
+            if (pre != predeclared_funcs.end()) {
+                // Declared in Pass 1: reuse it and drop placeholder params;
+                // real parameter symbols are pushed below.
+                func_sym = pre->second;
+                func_sym->params.clear();
+            } else {
+                func_sym = declare_function(fd->fn_name, ret_type);
+                if (func_sym == nullptr) {
+                    error(fd->loc, "Function '{}' is already declared",
+                          fd->fn_name);
+                }
             }
             fd->evaluated_type = ret_type;
             current_func_return_types.push_back(ret_type);

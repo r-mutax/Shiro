@@ -205,5 +205,9 @@ assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; let r0 = &arr; r0[0] = 99
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[1].x = 10; pts[1].y = 20; return pts[1].x + pts[1].y; }" 30
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[0].x = 40; let rp = &pts[0]; rp.y = 2; return pts[0].x + pts[0].y; }" 42
 
+assert "fn main() -> i8 { return foo(); } fn foo() -> i8 { return 42; }" 42
+assert "fn is_even(n: i8) -> i8 { if (n == 0) { return 1; } return is_odd(n - 1); } fn is_odd(n: i8) -> i8 { if (n == 0) { return 0; } return is_even(n - 1); } fn main() -> i8 { return is_even(10) + 41; }" 42
+assert "fn main() -> i8 { return calc(10, 20, 12); } fn calc(a: i8, b: i8, c: i8) -> i8 { return a + b + c; }" 42
+
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 
