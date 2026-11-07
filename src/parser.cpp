@@ -27,11 +27,11 @@ ASTNode* Parser::parseDefinition() {
 }
 
 
-ASTNode* Parser::parseTypeName(){
+ASTNode* Parser::parseTypeName(const std::string& context){
     SourceLoc loc = stream.peek().loc;
 
     if(stream.consume(Token::AND)){
-        auto ref_node = TypeNode::RefType(parseTypeName());
+        auto ref_node = TypeNode::RefType(parseTypeName("after '&'"));
         ref_node->loc = loc;
         return ref_node;
     }
@@ -39,7 +39,7 @@ ASTNode* Parser::parseTypeName(){
     if(stream.consume(Token::LSQUARE)){
         ASTNode* size_expr = parseExpression();
         expect(Token::RSQUARE, "Expected ']' after array size.");
-        ASTNode* base_type = parseTypeName();
+        ASTNode* base_type = parseTypeName("after array size");
         auto node = TypeNode::ArrayType(base_type, size_expr);
         node->loc = loc;
         return node;
@@ -47,7 +47,7 @@ ASTNode* Parser::parseTypeName(){
 
     Token type_tok = stream.next();
     if(!type_tok.isTypeCandidate()){
-        error(type_tok.loc, "Expected type name, but got " + type_tok.value);
+        error(type_tok.loc, "Expected type " + context + ", but got " + type_tok.value);
     }
     auto basic_node = TypeNode::BasicType(type_tok.value);
     basic_node->loc = loc;
@@ -77,7 +77,7 @@ ASTNode* Parser::parseFunctionDefinition() {
         ASTNode* type_node = TypeNode::Unknown();
 
         if (stream.consume(Token::COLON)) {
-            type_node = parseTypeName();
+            type_node = parseTypeName("after parameter name");
         }
         auto vd = new VariableDeclareNode(token.value, type_node);
         vd->loc = token.loc;
@@ -87,7 +87,7 @@ ASTNode* Parser::parseFunctionDefinition() {
     expect(Token::ARROW, "Expected '->' after function parameters.");
 
     // check token is type name candidate (keyword or IDENT)
-    ASTNode* return_type_node = parseTypeName();
+    ASTNode* return_type_node = parseTypeName("after '->'");
 
     ASTNode* block = parseBlock();
 
@@ -129,7 +129,7 @@ ASTNode* Parser::parseStructDefinition(){
             Token token = stream.next();
             expect(Token::COLON, "Expected ':' after struct member name.");
 
-            ASTNode* type_node = parseTypeName();
+            ASTNode* type_node = parseTypeName("after struct member name");
             
             auto vd = new VariableDeclareNode(token.value, type_node);
             vd->loc = token.loc;
@@ -164,7 +164,7 @@ ASTNode* Parser::parseVariableDeclare() {
 
     ASTNode* type_node = TypeNode::Unknown();
     if (stream.consume(Token::COLON)) {
-        type_node = parseTypeName();
+        type_node = parseTypeName("after let variable name");
     }
 
     auto vd = new VariableDeclareNode(vname.value, type_node);

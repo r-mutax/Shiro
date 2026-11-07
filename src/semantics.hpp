@@ -6,6 +6,8 @@
 #include "token.hpp"
 #include <format>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 struct SemanticsError {};
@@ -17,6 +19,13 @@ class Semantics {
     int symbol_id = 0;
 
     std::vector<const Type*> current_func_return_types;
+
+    // Pass 1 results: function symbols declared ahead of body checking, and
+    // structs already fully checked during Pass 1 (so Pass 2 skips them).
+    std::unordered_map<FunctionDefinitionNode*, Symbol*> predeclared_funcs;
+    std::unordered_set<ASTNode*> prechecked_structs;
+    // Signature-only parameter symbols; replaced by real ones in Pass 2.
+    std::vector<std::unique_ptr<Symbol>> placeholder_params;
 
     std::vector<std::unique_ptr<Type>> allocated_types;
     std::vector<std::unique_ptr<Scope>> allocated_scopes;
