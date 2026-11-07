@@ -38,7 +38,7 @@ class Parser {
     ASTNode* parseBlock();
     ASTNode* parseIfExpression();
     ASTNode* parseWhileExpression();
-    ASTNode* parseTypeName();
+    ASTNode* parseTypeName(const std::string& context = "name");
 
     [[noreturn]] void error(SourceLoc loc, const std::string& msg) {
         reporter.reportError(loc, msg);
