@@ -7,6 +7,9 @@
 struct Scope;
 
 struct Type {
+    enum Kind { PRIM, STRUCT, REF, ARRAY, SLICE };  // SLICE: reserved, unused
+    Kind kind = PRIM;
+
     std::string name;
     int size = 0;
     bool isUnsigned = false;
@@ -19,11 +22,13 @@ struct Type {
     const Type* base_type = nullptr;
     mutable const Type* ref_type = nullptr;
 
-    bool isStruct() const { return scope != nullptr; }
+    bool isStruct() const { return kind == STRUCT; }
 
-    bool isReference() const { return base_type != nullptr && array_length == 0; }
+    bool isPrimitive() const { return kind == PRIM; }
 
-    bool isArray() const { return array_length != 0; }
+    bool isReference() const { return kind == REF; }
+
+    bool isArray() const { return kind == ARRAY; }
 };
 
 struct Symbol {
