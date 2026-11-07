@@ -440,7 +440,7 @@ bool Semantics::checkNode(ASTNode* node) {
                 return false;
             }           
 
-            ia->fix_length = ia->slice->evaluated_type->array_length;
+            ia->fix_length = slice_type->array_length;
             ia->evaluated_type = slice_type->base_type;
             return true;
         }
@@ -739,6 +739,7 @@ const Type* Semantics::make_primitive(const std::string& name, int size,
     t.size = size;
     t.align = size;
     t.isUnsigned = isUnsigned;
+    t.kind = Type::PRIM;
     t.scope = nullptr;
     return alloc_type(t);
 }
@@ -749,6 +750,7 @@ const Type* Semantics::make_struct(const std::string& name, const Scope* cs){
     t.size = 0;
     t.align = 0;
     t.isUnsigned = false;
+    t.kind = Type::STRUCT;
     t.scope = const_cast<Scope*>(cs);
     return alloc_type(t);
 }
@@ -770,6 +772,7 @@ const Type* Semantics::make_reference(const Type* t){
     ref.align = 8;
     
     ref.isUnsigned = false;
+    ref.kind = Type::REF;
     ref.scope = nullptr;
     ref.base_type = t;
 
@@ -789,6 +792,7 @@ const Type* Semantics::make_array(const Type* base_type, const int64_t len){
     array.name = "[" + std::to_string(len) + "]" + base_type->name;
     array.size = base_type->size * len;
     array.align = base_type->align;
+    array.kind = Type::ARRAY;
     array.array_length = len;
     array.base_type = base_type;
     
