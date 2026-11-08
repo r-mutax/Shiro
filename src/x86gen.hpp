@@ -208,6 +208,11 @@ class X86Generator {
     const IRProgram& program;
     ErrorReporter& reporter;
     std::ostream& out;
+    bool checked_div = false;
+    std::string input_filename;
+    size_t div_check_counter = 0;
+    // (label, message body) pairs emitted into .rodata by generate()
+    std::vector<std::pair<std::string, std::string>> div_messages;
     const std::vector<std::string> argregs = {
         "rdi", //
         "rsi", //
@@ -225,6 +230,9 @@ class X86Generator {
     std::string activateSrc2(const Operand& op,
                              X86RegAllocState& regalloc_state);
     void deactivateDst(const Operand& op, X86RegAllocState& regalloc_state);
+
+    void emit_div_check(const IRInstruction& instr, const std::string& divisor,
+                        bool is_mod);
 
     void gen_function(const IRFunction& func);
     void gen_instruction(const IRInstruction& instr,
@@ -247,8 +255,10 @@ class X86Generator {
 
   public:
     X86Generator(const IRProgram& program, ErrorReporter& reporter,
-                 std::ostream& out = std::cout)
-        : program(program), reporter(reporter), out(out) {}
+                 std::ostream& out = std::cout, bool checked_div = false,
+                 std::string input_filename = "")
+        : program(program), reporter(reporter), out(out),
+          checked_div(checked_div), input_filename(std::move(input_filename)) {}
     ~X86Generator() = default;
 
     void generate();

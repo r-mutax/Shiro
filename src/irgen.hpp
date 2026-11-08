@@ -133,6 +133,8 @@ struct IRInstruction {
 
     std::vector<Operand> args;
 
+    SourceLoc loc; // source position (set for DIV/MOD only)
+
     std::string to_str() const {
         switch (op) {
             case MOV:
@@ -295,12 +297,16 @@ class IRGenerator {
         emit(IRInstruction::MUL, dst, src1, src2);
     }
 
-    void emit_div(Operand dst, Operand src1, Operand src2) {
+    void emit_div(Operand dst, Operand src1, Operand src2,
+                  SourceLoc loc = SourceLoc{}) {
         emit(IRInstruction::DIV, dst, src1, src2);
+        instructions.back().loc = loc;
     }
 
-    void emit_mod(Operand dst, Operand src1, Operand src2) {
+    void emit_mod(Operand dst, Operand src1, Operand src2,
+                  SourceLoc loc = SourceLoc{}) {
         emit(IRInstruction::MOD, dst, src1, src2);
+        instructions.back().loc = loc;
     }
 
     void emit_lshift(Operand dst, Operand src1, Operand src2) {
