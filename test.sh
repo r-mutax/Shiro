@@ -105,6 +105,12 @@ assert "fn main() -> i16 { let x: i16 = -1000; return x + 2000; }" 232
 assert "fn main() -> i8 { let x: i8; x = -56; return x + 100; }" 44
 assert "fn f(v: i8) -> i8 { return v + 100; } fn main() -> i8 { return f(-56); }" 44
 assert "fn main() -> i64 { return 10 - -3; }" 13
+# Boundary literals that must be accepted
+assert "fn main() -> i8 { let x: i8 = -128; return x; }" 128
+assert "fn main() -> i8 { let x: i8 = 127; return x; }" 127
+assert "fn main() -> u8 { let x: u8 = 255; return x; }" 255
+assert "fn main() -> i16 { let x: i16 = -32768; return x + 32767; }" 255
+assert "fn main() -> i8 { return -128; }" 128
 assert "fn main() -> i8 {5 < 10;}" 1
 assert "fn main() -> i8 {10 < 5;}" 0
 assert "fn main() -> i8 {5 < 5;}" 0

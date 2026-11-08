@@ -106,6 +106,40 @@ bool Semantics::checkNode(ASTNode* node) {
                node->kind == ASTNode::NODE_CHAR_LITERAL;
     };
 
+    // Validate that a compile-time integer literal fits in the integer type
+    // it is being coerced to. Non-literal expressions are skipped.
+    auto checkLiteralRange = [this](ASTNode* expr, const Type* target) {
+        while (target && target->isReference())
+            target = target->base_type;
+        if (!expr || !target || expr->kind != ASTNode::NODE_INTEGER)
+            return;
+        static const char* int_names[] = {"i8",  "i16", "i32", "i64",
+                                          "u8",  "u16", "u32", "u64"};
+        bool is_int = false;
+        for (auto* n : int_names)
+            if (target->name == n)
+                is_int = true;
+        if (!is_int || target->size < 1 || target->size > 8)
+            return;
+        auto v = evalConstInt(expr);
+        if (!v)
+            return;
+        int bits = target->size * 8;
+        __int128 lo, hi;
+        if (target->isUnsigned) {
+            lo = 0;
+            hi = (static_cast<__int128>(1) << bits) - 1;
+        } else {
+            lo = -(static_cast<__int128>(1) << (bits - 1));
+            hi = (static_cast<__int128>(1) << (bits - 1)) - 1;
+        }
+        if (*v < lo || *v > hi) {
+            error(expr->loc,
+                  "Integer literal {} is out of range for type '{}'.", *v,
+                  target->name);
+        }
+    };
+
     switch (node->kind) {
         case ASTNode::NODE_TRANSLATION_UNIT: {
             auto* tu = static_cast<TranslationUnitNode*>(node);
@@ -329,6 +363,7 @@ bool Semantics::checkNode(ASTNode* node) {
                     return false;
 
                 if (isAutoCastInteger(arg)) {
+                    checkLiteralRange(arg, func_sym->params[i]->type_info);
                     arg->evaluated_type = func_sym->params[i]->type_info;
                 }
 
@@ -372,6 +407,7 @@ bool Semantics::checkNode(ASTNode* node) {
                     sym->type_info = var_type;
                     vd->evaluated_type = var_type;
                 } else if (isAutoCastInteger(vd->init_expr)) {
+                    checkLiteralRange(vd->init_expr, var_type);
                     vd->init_expr->evaluated_type = var_type;
                 }
 
@@ -460,6 +496,7 @@ bool Semantics::checkNode(ASTNode* node) {
 
                 if(isAutoCastInteger(mc->args[i])){
                     mc->args[i]->evaluated_type = sym->params[i]->type_info;
+                    checkLiteralRange(mc->args[i], sym->params[i]->type_info);
                 }
 
                 if(mc->args[i]->evaluated_type != sym->params[i]->type_info){
@@ -512,6 +549,7 @@ bool Semantics::checkNode(ASTNode* node) {
                 return false;
 
             if (isAutoCastInteger(rs->expr)) {
+                checkLiteralRange(rs->expr, return_type);
                 rs->expr->evaluated_type = return_type;
             }
 
@@ -625,6 +663,7 @@ bool Semantics::checkNode(ASTNode* node) {
                     }
                     sym->type_info = as->expr->evaluated_type;
                 } else if (isAutoCastInteger(as->expr)) {
+                    checkLiteralRange(as->expr, sym->type_info);
                     as->expr->evaluated_type = sym->type_info;
                 }
                 var_node->evaluated_type = sym->type_info;
@@ -638,6 +677,7 @@ bool Semantics::checkNode(ASTNode* node) {
                 lvalue_type = as->lvalue->evaluated_type;
 
                 if(isAutoCastInteger(as->expr)){
+                    checkLiteralRange(as->expr, lvalue_type);
                     as->expr->evaluated_type = lvalue_type;
                 }
             } else {
@@ -667,10 +707,14 @@ bool Semantics::checkNode(ASTNode* node) {
                 if (isAutoCastInteger(if_node->then_block)) {
                     if_node->then_block->evaluated_type =
                         if_node->else_block->evaluated_type;
+                    checkLiteralRange(if_node->then_block,
+                                      if_node->then_block->evaluated_type);
                 }
                 if (isAutoCastInteger(if_node->else_block)) {
                     if_node->else_block->evaluated_type =
                         if_node->then_block->evaluated_type;
+                    checkLiteralRange(if_node->else_block,
+                                      if_node->else_block->evaluated_type);
                 }
 
                 if (if_node->then_block->evaluated_type !=

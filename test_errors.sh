@@ -97,4 +97,16 @@ assert_error "fn main() -> i8 { let x: i8 = 10; x[0]; }" "Not an array"
 assert_error "struct Point { x: i8 }; fn main() -> i8 { let arr: [5]i8; let p: Point; arr[p]; }" "Index must be an integer"
 assert_error "fn main() -> i8 { let arr: [0]i8; }" "Array length must be positive"
 
+# --- Integer Literal Range ---
+assert_error "fn main() -> i8 { let x: i8 = 300; return x; }" "Integer literal 300 is out of range for type 'i8'"
+assert_error "fn main() -> i8 { let x: i8 = -129; return x; }" "Integer literal -129 is out of range for type 'i8'"
+assert_error "fn main() -> u8 { let x: u8 = -1; return x; }" "Integer literal -1 is out of range for type 'u8'"
+assert_error "fn main() -> i8 { let x: i8; x = 128; return x; }" "Integer literal 128 is out of range for type 'i8'"
+assert_error "fn f(v: u8) -> u8 { return v; } fn main() -> u8 { return f(256); }" "Integer literal 256 is out of range for type 'u8'"
+assert_error "fn main() -> i8 { return 1000; }" "Integer literal 1000 is out of range for type 'i8'"
+
+assert_error "struct S { a: i8, fn set(v: i8) -> i8 { return v; } }; fn main() -> i8 { let s: S; return s.set(300); }" "Integer literal 300 is out of range for type 'i8'"
+assert_error "fn main() -> i8 { let y: i8 = 1; let x: &i8 = &y; x = 300; return y; }" "Integer literal 300 is out of range for type 'i8'"
+assert_error "fn main() -> i8 { let y: i8 = 1; let z: i8 = if (1) 300 else y; return z; }" "Integer literal 300 is out of range for type 'i8'"
+
 echo -e "\e[32mAll error diagnostic tests passed successfully!\e[0m"
