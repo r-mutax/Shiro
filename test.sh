@@ -174,6 +174,11 @@ assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main()
 assert "fn test() -> i8 {10;} fn main() -> i8 { if(1){ return 10; } else { return test(); } 1; }" 10
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {42;}" 42
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {let p : Point; p.x = 5; p.y = 10; p.x + p.y;}" 15
+
+# --- Struct Methods ---
+assert "struct P { x: i64, y: i64, fn sum() -> i64 { return self.x + self.y; } }; fn main() -> i64 { let p: P; p.x = 10; p.y = 32; return p.sum(); }" 42
+assert "struct P { x: i64, fn set(v: i64) -> i64 { self.x = v; return 0; } }; fn main() -> i64 { let p: P; p.set(42); return p.x; }" 42
+
 assert "fn main() -> i8 { let x : i8 = 10; return x; }" 10
 assert "fn main() -> i8 { let y : i8; y = 10; let x : i8 = y; return x; }" 10
 assert "fn foo(x : i8) -> i8 { let y : i8 = x; return y; } fn main() -> i8 { return foo(20); }" 20
@@ -192,13 +197,11 @@ assert "fn main() -> i8 { '\\\\'; }" 92
 assert "fn main() -> i8 { 'A' + 1; }" 66
 assert "fn main() -> i8 { let c: u8; c = 'Z'; c; }" 90
 
-assert "fn main() -> i8 { let x: i8 = 42; let rx = &x; rx; }" 42
 assert "fn main() -> i8 { let x: i8 = 42; let rx: &i8 = &x; rx; }" 42
 assert "fn main() -> i8 { let y: i8 = 10; let x = &y; let z = &x; z; }" 10
 assert "fn main() -> i8 { let y: i8 = 10; let x = &y; let z = &x; x = 42; return z; }" 42
 assert "fn main() -> i8 { let a: i8 = 10; let b: i8 = 20; let ra: &i8 = &a; let rb: &i8 = &b; ra + rb; }" 30
 
-assert "fn main() -> i8 { let x: i8 = 10; return x; }" 10
 assert "fn main() -> i8 { let a: i8 = 20; let b: i8 = a + 22; return b; }" 42
 assert "fn foo(x: i8) -> i8 { let y: i8 = x + 5; return y; } fn main() -> i8 { return foo(37); }" 42
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let p: Point; p.x = 10; p.y = 20; let rx = &p.x; let ry = &p.y; rx = 50; return rx + ry; }" 70
@@ -210,6 +213,10 @@ assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; arr[1] = 20; arr[2] = 30;
 assert "fn main() -> i8 { let arr: [5]i8; arr[0] = 10; let r0 = &arr; r0[0] = 99; return arr[0]; }" 99
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[1].x = 10; pts[1].y = 20; return pts[1].x + pts[1].y; }" 30
 assert "struct Point { x: i8, y: i8 }; fn main() -> i8 { let pts: [3]Point; pts[0].x = 40; let rp = &pts[0]; rp.y = 2; return pts[0].x + pts[0].y; }" 42
+
+# Variable index read/write on arrays
+assert "fn main() -> i64 { let arr: [5]i64; let i: i64 = 2; arr[0] = 10; arr[2] = 32; return arr[0] + arr[i]; }" 42
+assert "fn main() -> i64 { let arr: [5]i64; let i: i64 = 0; let s: i64 = 0; while (i < 5) { arr[i] = i * 10; i = i + 1; } i = 0; while (i < 5) { s = s + arr[i]; i = i + 1; } return s; }" 100
 
 # Regression tests (issue #18): arrays and references must not be confused
 assert "fn main() -> i8 { let arr: [4]i8; arr[3] = 7; let r = &arr; r[3] = r[3] + 1; return arr[3]; }" 8

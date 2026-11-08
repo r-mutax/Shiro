@@ -70,4 +70,7 @@ assert_meta_section_contains "fn add(x: i32, y: i32) -> i32 { x + y; }" "private
 # 3. Private Structs
 assert_meta_section_contains "struct Point { x: i8, y: i8 };" "private" "struct Point {"
 
+# 4. Private Methods
+assert_meta_section_contains "struct Point { x: i8, fn getx() -> i8 { return self.x; } }; fn main() -> i8 { 0; }" "private" "fn getx(self: &Point) -> i8;"
+
 echo -e "${GREEN}All meta-writer tests passed successfully!${RESET}"
