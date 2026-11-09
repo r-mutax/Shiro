@@ -24,6 +24,7 @@ test: $(TARGET)
 	bash test.sh
 	bash test_errors.sh
 	bash test_meta.sh
+	bash test_no_japanese.sh
 
 -include $(DEPS)
 
