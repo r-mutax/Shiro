@@ -73,4 +73,16 @@ assert_meta_section_contains "struct Point { x: i8, y: i8 };" "private" "struct 
 # 4. Private Methods
 assert_meta_section_contains "struct Point { x: i8, fn getx() -> i8 { return self.x; } }; fn main() -> i8 { 0; }" "private" "fn getx(self: &Point) -> i8;"
 
+# 5. pub propagation on struct members (Issue #29)
+PUB_SRC="struct Point { pub x: i64, y: i64, pub fn getx() -> i64 { return self.x; } }; fn main() -> i64 { let p: Point; p.x = 3; p.y = 4; return p.getx(); }"
+assert_meta_section_contains "$PUB_SRC" "private" "^  pub x: i64;"
+assert_meta_section_contains "$PUB_SRC" "private" "^  pub fn getx(self: &Point) -> i64;"
+assert_meta_section_contains "$PUB_SRC" "private" "^  y: i64;"
+
+# 6. Struct without pub members: no member gets pub
+NOPUB_SRC="struct Point { x: i64, y: i64, fn getx() -> i64 { return self.x; } }; fn main() -> i64 { 0; }"
+assert_meta_section_contains "$NOPUB_SRC" "private" "^  x: i64;"
+assert_meta_section_contains "$NOPUB_SRC" "private" "^  y: i64;"
+assert_meta_section_contains "$NOPUB_SRC" "private" "^  fn getx(self: &Point) -> i64;"
+
 echo -e "${GREEN}All meta-writer tests passed successfully!${RESET}"
