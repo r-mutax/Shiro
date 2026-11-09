@@ -109,4 +109,9 @@ assert_error "struct S { a: i8, fn set(v: i8) -> i8 { return v; } }; fn main() -
 assert_error "fn main() -> i8 { let y: i8 = 1; let x: &i8 = &y; x = 300; return y; }" "Integer literal 300 is out of range for type 'i8'"
 assert_error "fn main() -> i8 { let y: i8 = 1; let z: i8 = if (1) 300 else y; return z; }" "Integer literal 300 is out of range for type 'i8'"
 
+# --- Struct / Array / Method Errors ---
+assert_error "struct S { a: i8 }; struct S { a: i8 }; fn main() -> i8 { return 0; }" "Struct 'S' is already declared"
+assert_error "fn main() -> i8 { let arr: [3]i8; let v: i32 = 1; arr[0] = v; return 0; }" "Type mismatch in assignment. Left: 'i8', Right: 'i32'"
+assert_error "struct S { a: i8, fn f() -> { return 1; } }; fn main() -> i8 { return 0; }" "Expected type after '->', but got"
+
 echo -e "\e[32mAll error diagnostic tests passed successfully!\e[0m"
