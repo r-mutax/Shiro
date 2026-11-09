@@ -180,11 +180,11 @@ void X86Generator::emit_div_check(const IRInstruction& instr,
         if (c == '"' || c == '\\') escaped += '\\';
         escaped += c;
     }
-    std::string raw = is_mod ? "実行時エラー: 0で剰余を求めようとしました ("
-                             : "実行時エラー: 0で割ろうとしました (";
+    std::string raw = is_mod ? "Runtime error: modulo by zero ("
+                             : "Runtime error: division by zero (";
     raw += name + ":" + std::to_string(instr.loc.line) + ")\n";
-    std::string body = is_mod ? "実行時エラー: 0で剰余を求めようとしました ("
-                              : "実行時エラー: 0で割ろうとしました (";
+    std::string body = is_mod ? "Runtime error: modulo by zero ("
+                              : "Runtime error: division by zero (";
     body += escaped + ":" + std::to_string(instr.loc.line) + ")\\n";
 
     size_t id = div_check_counter++;
@@ -535,7 +535,11 @@ void X86Generator::gen_instruction(const IRInstruction& instr,
                 rdi = "rdi";
                 out << "  mov rdi, " << src2 << std::endl;
             }
-            if (checked_div) emit_div_check(instr, rdi, false);
+            // A constant divisor is never zero: semantics rejects a
+            // constant zero divisor at compile time, so no runtime check
+            // is needed for INT_VAL.
+            if (checked_div && instr.src2.kind != Operand::INT_VAL)
+                emit_div_check(instr, rdi, false);
 
             if (instr.src1.type.isUnsigned) {
                 out << "  xor rdx, rdx" << std::endl;
@@ -558,8 +562,10 @@ void X86Generator::gen_instruction(const IRInstruction& instr,
             out << "  cqo" << std::endl;
 
             if (instr.src2.kind == Operand::INT_VAL) {
+                // A constant divisor is never zero: semantics rejects a
+                // constant zero divisor at compile time, so no runtime
+                // check is needed for INT_VAL.
                 out << "  mov rdi, " << src2 << std::endl;
-                if (checked_div) emit_div_check(instr, "rdi", true);
                 out << "  idiv rdi" << std::endl;
             } else {
                 if (checked_div) emit_div_check(instr, src2, true);

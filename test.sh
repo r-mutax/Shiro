@@ -279,8 +279,8 @@ assert "fn is_even(n: i8) -> i8 { if (n == 0) { return 1; } return is_odd(n - 1)
 assert "fn main() -> i8 { return calc(10, 20, 12); } fn calc(a: i8, b: i8, c: i8) -> i8 { return a + b + c; }" 42
 
 # --checked-div (issue #17)
-DIVMSG="実行時エラー: 0で割ろうとしました (tmp.shiro:"
-MODMSG="実行時エラー: 0で剰余を求めようとしました (tmp.shiro:"
+DIVMSG="Runtime error: division by zero (tmp.shiro:"
+MODMSG="Runtime error: modulo by zero (tmp.shiro:"
 assert_checked_div on "fn main() -> i64 { let x: i64 = 0; return 10 / x; }" 1 "${DIVMSG}1)"
 assert_checked_div on "fn main() -> i64 { let x: i64 = 0; return 10 % x; }" 1 "${MODMSG}1)"
 assert_checked_div on "fn main() -> u64 { let x: u64 = 0; let y: u64 = 10; return y / x; }" 1 "${DIVMSG}1)"
