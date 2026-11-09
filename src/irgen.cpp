@@ -424,10 +424,10 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
                     emit_mul(ret, left, right);
                     break;
                 case Token::SLASH:
-                    emit_div(ret, left, right);
+                    emit_div(ret, left, right, bin_op->loc);
                     break;
                 case Token::MOD:
-                    emit_mod(ret, left, right);
+                    emit_mod(ret, left, right, bin_op->loc);
                     break;
                 default:
                     error(bin_op->loc,

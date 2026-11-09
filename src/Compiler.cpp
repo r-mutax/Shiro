@@ -74,7 +74,8 @@ bool Compiler::compile_src(std::string_view src) {
                 return false;
             }
 
-            X86Generator x86_generator(ir_generator.get_program(), reporter, *out);
+            X86Generator x86_generator(ir_generator.get_program(), reporter, *out,
+                                       env.checked_div, env.input_filename);
             x86_generator.generate();
         }
 

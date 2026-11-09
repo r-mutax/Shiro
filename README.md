@@ -20,7 +20,12 @@ gcc -no-pie hello.s -o hello
 
 # Run the test suite (test.sh, test_errors.sh, test_meta.sh)
 make test
+
+# Enable runtime integer division-by-zero checks (disabled by default)
+./shiro --checked-div hello.shiro -o hello.s
 ```
+
+With `--checked-div`, integer `/` and `%` check the divisor right before execution. If it is 0, the program prints `実行時エラー: 0で割ろうとしました (file:line)` (for `%`: `実行時エラー: 0で剰余を求めようとしました (file:line)`) to stderr and exits with code 1. Without the flag, behavior is unchanged (a zero divisor crashes with SIGFPE). Constant division by zero is always a compile error.
 
 ## 1. Specifications
 *   **Data Types**:
@@ -155,7 +160,7 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
     *   Assigning a value of a mismatched type to an already typed variable results in a compile-time type mismatch error.
 *   **Division and Modulo**: `<expr> / <expr>`, `<expr> % <expr>`
     *   A divisor that is a compile-time constant zero is a compile error.
-    *   If the divisor becomes zero at run time, the behavior is undefined: the generated code executes the division as-is, and the program may terminate abnormally (e.g. with SIGFPE on x86-64).
+    *   If the divisor becomes zero at run time, the behavior is undefined: the generated code executes the division as-is, and the program may terminate abnormally (e.g. with SIGFPE on x86-64). When the program is compiled with `--checked-div`, the divisor is checked at run time instead (see Building and Testing): a zero divisor prints an error and exits with code 1.
 *   **Scope**:
     *   Variables are scoped to the block `{ ... }` (or function scope) where they are declared.
     *   Declaring a variable inside an inner block with the same name shadows the outer variable.

@@ -61,6 +61,62 @@ assert() {
 
 # Run tests
 echo "Running Shiro compiler tests..."
+# Function to run a test case with optional --checked-div
+# Usage: assert_checked_div <on|off> "code" expected_exit_code ["stderr_pattern"]
+#   expected_exit_code is the shell $? of the binary (e.g. 136 for SIGFPE).
+#   If stderr_pattern is given, it must match (grep -F) the binary's stderr.
+#   code may contain newlines (written with printf '%s\n').
+assert_checked_div() {
+    local mode="$1"
+    local code="$2"
+    local expected="$3"
+    local pattern="$4"
+    local flag=""
+    [ "$mode" = "on" ] && flag="--checked-div"
+
+    printf '%s\n' "$code" > tmp.shiro
+
+    local compile_output
+    compile_output=$(./shiro $flag tmp.shiro -o tmp.s 2>&1)
+    if [ $? -ne 0 ]; then
+        echo -e "\e[31m[FAIL] Compilation failed for: \"$code\"\e[0m"
+        echo "$compile_output"
+        rm -f tmp.shiro tmp.s
+        exit 1
+    fi
+
+    local asm_output
+    asm_output=$(gcc -no-pie tmp.s -o tmp_bin 2>&1)
+    if [ $? -ne 0 ]; then
+        echo -e "\e[31m[FAIL] Assembly failed for: \"$code\"\e[0m"
+        echo "$asm_output"
+        cat tmp.s
+        rm -f tmp.shiro tmp.s tmp_bin
+        exit 1
+    fi
+
+    local stderr_output actual
+    # Run in a subshell wrapper so signal deaths are reported as 128+N
+    stderr_output=$(bash -c './tmp_bin' 2>&1 >/dev/null)
+    actual=$?
+
+    local ok=1
+    [ "$actual" -eq "$expected" ] || ok=0
+    if [ -n "$pattern" ]; then
+        echo "$stderr_output" | grep -qF -- "$pattern" || ok=0
+    fi
+
+    if [ $ok -eq 1 ]; then
+        echo -e "\e[32m[OK]   (checked-div=$mode) \"$code\" => $actual\e[0m"
+    else
+        echo -e "\e[31m[FAIL] (checked-div=$mode) \"$code\" => expected $expected (stderr ~ '$pattern'), got $actual (stderr: '$stderr_output')\e[0m"
+        rm -f tmp.shiro tmp.s tmp_bin
+        exit 1
+    fi
+
+    rm -f tmp.shiro tmp.s tmp_bin
+}
+
 assert "fn main() -> i8 {42;}" 42
 assert "fn main() -> i8 {40 + 2;}" 42
 assert "fn main() -> i8 {222 + 323;}" 33
@@ -221,6 +277,48 @@ assert "fn set(a: &[3]i8) -> i8 { a[2] = 21; return 0; } fn main() -> i8 { let a
 assert "fn main() -> i8 { return foo(); } fn foo() -> i8 { return 42; }" 42
 assert "fn is_even(n: i8) -> i8 { if (n == 0) { return 1; } return is_odd(n - 1); } fn is_odd(n: i8) -> i8 { if (n == 0) { return 0; } return is_even(n - 1); } fn main() -> i8 { return is_even(10) + 41; }" 42
 assert "fn main() -> i8 { return calc(10, 20, 12); } fn calc(a: i8, b: i8, c: i8) -> i8 { return a + b + c; }" 42
+
+# --checked-div (issue #17)
+DIVMSG="Runtime error: division by zero (tmp.shiro:"
+MODMSG="Runtime error: modulo by zero (tmp.shiro:"
+assert_checked_div on "fn main() -> i64 { let x: i64 = 0; return 10 / x; }" 1 "${DIVMSG}1)"
+assert_checked_div on "fn main() -> i64 { let x: i64 = 0; return 10 % x; }" 1 "${MODMSG}1)"
+assert_checked_div on "fn main() -> u64 { let x: u64 = 0; let y: u64 = 10; return y / x; }" 1 "${DIVMSG}1)"
+assert_checked_div on "fn main() -> i64 {
+    let x: i64 = 0;
+    let y: i64 = 5;
+    return 10 / x;
+}" 1 "${DIVMSG}4)"
+assert_checked_div on "fn main() -> i64 {
+    let x: i64 = 0;
+    let y: i64 = 5;
+    return y % x;
+}" 1 "${MODMSG}4)"
+assert_checked_div on "fn main() -> i64 { let x: i64 = 2; return 10 / x; }" 5
+assert_checked_div on "fn main() -> i64 { let x: i64 = 3; return 10 % x; }" 1
+assert_checked_div on "fn main() -> i64 { return 10 / 2; }" 5
+assert_checked_div on "fn main() -> i64 { return 10 % 3; }" 1
+assert_checked_div on "fn main() -> i64 { let a: i64 = 100; let b: i64 = 7; return a / b + a % b; }" 16
+assert_checked_div on "fn main() -> i64 { let a: i64 = 0 - 7; let b: i64 = 2; return a / b + 10; }" 7
+assert_checked_div off "fn main() -> i64 { let x: i64 = 2; return 10 / x; }" 5
+assert_checked_div off "fn main() -> i64 { let a: i64 = 100; let b: i64 = 7; return a / b + a % b; }" 16
+assert_checked_div off "fn main() -> i64 { let x: i64 = 0; return 10 / x; }" 136
+assert_checked_div off "fn main() -> i64 { let x: i64 = 0; return 10 % x; }" 136
+# i8 / u8, non-main function, register spill
+assert_checked_div on "fn main() -> i8 { let x: i8 = 0; let y: i8 = 10; return y / x; }" 1 "${DIVMSG}1)"
+assert_checked_div on "fn main() -> u8 { let x: u8 = 0; let y: u8 = 10; return y % x; }" 1 "${MODMSG}1)"
+assert_checked_div on "fn safe(a: i64, b: i64) -> i64 {
+    let r: i64 = 1;
+    return a / b;
+}
+fn main() -> i64 {
+    return safe(10, 0);
+}" 1 "${DIVMSG}3)"
+SPILLVARS="let a: i64 = 1; let b: i64 = 2; let c: i64 = 3; let d: i64 = 4; let e: i64 = 5; let f: i64 = 6; let g: i64 = 7; let h: i64 = 8; let i: i64 = 9; let j: i64 = 10; let k: i64 = 11; let l: i64 = 12; let z: i64 = 0;"
+assert_checked_div on "fn main() -> i64 { $SPILLVARS return (a + b + c + d + e + f + g + h + i + j + k + l) / (z + a - a); }" 1 "${DIVMSG}1)"
+assert_checked_div on "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 % (z + a - a)))))))))))); }" 1 "${MODMSG}1)"
+assert_checked_div on "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 / (a + b + c)))))))))))); }" 94
+assert_checked_div off "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 / (a + b + c)))))))))))); }" 94
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

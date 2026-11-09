@@ -25,6 +25,8 @@ int main(int argc, const char* argv[]) {
             }
         } else if (arg == "-M" || arg == "--emit-meta") {
             compiler.env.emit_meta = true;
+        } else if (arg == "--checked-div") {
+            compiler.env.checked_div = true;
         } else {
             // input file
             compiler.env.input_filename = arg;

@@ -10,6 +10,15 @@ void X86Generator::generate() {
         gen_function(func);
     }
 
+    if (checked_div && !div_messages.empty()) {
+        out << ".section .rodata" << std::endl;
+        for (auto& [label, body] : div_messages) {
+            out << label << ":" << std::endl;
+            out << "  .ascii \"" << body << "\"" << std::endl;
+        }
+        out << ".section .text" << std::endl;
+    }
+
     // Mark the stack as non-executable. Without this note section,
     // the linker warns that the stack is executable.
     out << ".section .note.GNU-stack,\"\",@progbits" << std::endl;
@@ -161,6 +170,39 @@ std::string X86Generator::activateSrc2(const Operand& op,
         default:
             fatal("Source operand is unexpected");
     }
+}
+
+void X86Generator::emit_div_check(const IRInstruction& instr,
+                                  const std::string& divisor, bool is_mod) {
+    std::string name = input_filename.empty() ? "<source>" : input_filename;
+    std::string escaped;
+    for (char c : name) {
+        if (c == '"' || c == '\\') escaped += '\\';
+        escaped += c;
+    }
+    std::string raw = is_mod ? "Runtime error: modulo by zero ("
+                             : "Runtime error: division by zero (";
+    raw += name + ":" + std::to_string(instr.loc.line) + ")\n";
+    std::string body = is_mod ? "Runtime error: modulo by zero ("
+                              : "Runtime error: division by zero (";
+    body += escaped + ":" + std::to_string(instr.loc.line) + ")\\n";
+
+    size_t id = div_check_counter++;
+    std::string msg_label = ".Ldivmsg" + std::to_string(id);
+    std::string ok_label = ".Ldivok" + std::to_string(id);
+    div_messages.emplace_back(msg_label, body);
+
+    out << "  test " << divisor << ", " << divisor << std::endl;
+    out << "  jne " << ok_label << std::endl;
+    out << "  mov rax, 1" << std::endl;
+    out << "  mov rdi, 2" << std::endl;
+    out << "  lea rsi, [rip + " << msg_label << "]" << std::endl;
+    out << "  mov rdx, " << raw.size() << std::endl;
+    out << "  syscall" << std::endl;
+    out << "  mov rax, 60" << std::endl;
+    out << "  mov rdi, 1" << std::endl;
+    out << "  syscall" << std::endl;
+    out << ok_label << ":" << std::endl;
 }
 
 void X86Generator::deactivateDst(const Operand& op,
@@ -493,6 +535,11 @@ void X86Generator::gen_instruction(const IRInstruction& instr,
                 rdi = "rdi";
                 out << "  mov rdi, " << src2 << std::endl;
             }
+            // A constant divisor is never zero: semantics rejects a
+            // constant zero divisor at compile time, so no runtime check
+            // is needed for INT_VAL.
+            if (checked_div && instr.src2.kind != Operand::INT_VAL)
+                emit_div_check(instr, rdi, false);
 
             if (instr.src1.type.isUnsigned) {
                 out << "  xor rdx, rdx" << std::endl;
@@ -515,9 +562,13 @@ void X86Generator::gen_instruction(const IRInstruction& instr,
             out << "  cqo" << std::endl;
 
             if (instr.src2.kind == Operand::INT_VAL) {
+                // A constant divisor is never zero: semantics rejects a
+                // constant zero divisor at compile time, so no runtime
+                // check is needed for INT_VAL.
                 out << "  mov rdi, " << src2 << std::endl;
                 out << "  idiv rdi" << std::endl;
             } else {
+                if (checked_div) emit_div_check(instr, src2, true);
                 out << "  idiv " << src2 << std::endl;
             }
 
