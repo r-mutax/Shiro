@@ -29,7 +29,13 @@ struct Type {
     bool isReference() const { return kind == REF; }
 
     bool isArray() const { return kind == ARRAY; }
+
+    // bool is a 1-byte unsigned primitive named "bool" (keyword, so it cannot
+    // be shadowed by a user type).
+    bool isBool() const { return kind == PRIM && name == "bool"; }
 };
+
+struct ASTNode;
 
 struct Symbol {
     enum Kind { VARIABLE, FUNCTION, TYPE } kind;
@@ -39,6 +45,8 @@ struct Symbol {
     std::vector<Symbol*> params;
     int offset = 0;
     bool pub = false;
+    // Declaring node of a variable (used to fix up late-bound types).
+    ASTNode* decl_node = nullptr;
 
     Symbol(Kind kind, const std::string& name) : kind(kind), name(name) {};
 };
@@ -85,6 +93,7 @@ struct ASTNode {
         NODE_FUNCTION_CALL,
         NODE_INTEGER,
         NODE_CHAR_LITERAL,
+        NODE_BOOL_LITERAL,
         NODE_BLOCK,
         NODE_UNARY_OP,
         NODE_BINARY_OP,
@@ -214,6 +223,13 @@ struct CharLiteralNode : public ASTNode {
 
     explicit CharLiteralNode(int64_t value)
         : ASTNode(Kind::NODE_CHAR_LITERAL), value(value) {}
+};
+
+struct BoolLiteralNode : public ASTNode {
+    bool value;
+
+    explicit BoolLiteralNode(bool value)
+        : ASTNode(Kind::NODE_BOOL_LITERAL), value(value) {}
 };
 
 struct BlockNode : public ASTNode {

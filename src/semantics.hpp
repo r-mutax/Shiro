@@ -93,6 +93,7 @@ class Semantics {
     const Type* i32_t = nullptr;
     const Type* i64_t = nullptr;
     const Type* u8_t = nullptr;
+    const Type* bool_t = nullptr;
     const Type* u16_t = nullptr;
     const Type* u32_t = nullptr;
     const Type* u64_t = nullptr;

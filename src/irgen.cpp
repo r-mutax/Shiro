@@ -167,6 +167,9 @@ Operand IRGenerator::gen_expr(ASTNode* node) {
     } else if (node->kind == ASTNode::NODE_CHAR_LITERAL) {
         CharLiteralNode* ch = static_cast<CharLiteralNode*>(node);
         return Operand::IntVal(ch->value, node->evaluated_type);
+    } else if (node->kind == ASTNode::NODE_BOOL_LITERAL) {
+        BoolLiteralNode* b = static_cast<BoolLiteralNode*>(node);
+        return Operand::IntVal(b->value ? 1 : 0, node->evaluated_type);
     } else if (node->kind == ASTNode::NODE_VARIABLE) {
         VariableNode* v = static_cast<VariableNode*>(node);
         auto it = symid_to_temp.find(v->symbol_id);

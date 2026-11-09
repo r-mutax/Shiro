@@ -106,11 +106,57 @@ bool Semantics::checkNode(ASTNode* node) {
                node->kind == ASTNode::NODE_CHAR_LITERAL;
     };
 
+    // bool-ness of a type, looking through references.
+    auto isBoolType = [](const Type* t) {
+        while (t && t->isReference())
+            t = t->base_type;
+        return t && t->isBool();
+    };
+
+    // Expressions that auto-dereference a reference at runtime. Other
+    // expressions of reference type (e.g. `&b`, calls returning `&bool`)
+    // yield the address itself.
+    auto isAutoDerefLvalue = [](const ASTNode* e) {
+        return e && (e->kind == ASTNode::NODE_VARIABLE ||
+                     e->kind == ASTNode::NODE_MEMBER_ACCESS ||
+                     e->kind == ASTNode::NODE_INDEX_ACCESS);
+    };
+
+    // True if the expression yields a bool VALUE (not an address).
+    auto isBoolValue = [&](const ASTNode* e) {
+        if (!e || !e->evaluated_type)
+            return false;
+        const Type* t = e->evaluated_type;
+        if (t->isReference() && !isAutoDerefLvalue(e))
+            return false;
+        return isBoolType(t);
+    };
+
+    // True if `src` is a non-lvalue expression yielding a reference to bool
+    // being stored into a plain `bool` target.
+    auto isBoolRefMisuse = [&](const Type* target, const ASTNode* src) {
+        return target && !target->isReference() && target->isBool() &&
+               src && src->evaluated_type &&
+               src->evaluated_type->isReference() &&
+               isBoolType(src->evaluated_type) && !isAutoDerefLvalue(src);
+    };
+
+    auto typeName = [](const Type* t) -> std::string {
+        return t ? std::string(t->name) : std::string("unknown");
+    };
+
     // Validate that a compile-time integer literal fits in the integer type
     // it is being coerced to. Non-literal expressions are skipped.
+    // Integer/char literals are never implicitly converted to bool.
     auto checkLiteralRange = [this](ASTNode* expr, const Type* target) {
         while (target && target->isReference())
             target = target->base_type;
+        if (expr && target && target->isBool() &&
+            (expr->kind == ASTNode::NODE_INTEGER ||
+             expr->kind == ASTNode::NODE_CHAR_LITERAL)) {
+            error(expr->loc,
+                  "Cannot implicitly convert an integer literal to 'bool'.");
+        }
         if (!expr || !target || expr->kind != ASTNode::NODE_INTEGER)
             return;
         static const char* int_names[] = {"i8",  "i16", "i32", "i64",
@@ -378,7 +424,7 @@ bool Semantics::checkNode(ASTNode* node) {
                           "'{}', but got '{}'",
                           i + 1, fc->fn_name,
                           func_sym->params[i]->type_info->name,
-                          arg->evaluated_type->name);
+                          typeName(arg->evaluated_type));
                 }
             }
 
@@ -400,11 +446,15 @@ bool Semantics::checkNode(ASTNode* node) {
                 return false;
             }
 
+            sym->decl_node = vd;
             vd->symbol_id = sym->id;
             vd->evaluated_type = var_type;
 
             if(vd->init_expr != nullptr){
                 if(!checkNode(vd->init_expr)) return false;
+                if(!vd->init_expr->evaluated_type){
+                    error(vd->init_expr->loc, "Initializer of variable '{}' has no value", vd->name);
+                }
 
                 if(var_type->name == "unknown"){
                     var_type = vd->init_expr->evaluated_type;
@@ -421,7 +471,7 @@ bool Semantics::checkNode(ASTNode* node) {
                           "Expected "
                           "'{}', but got '{}'",
                           vd->name, var_type->name,
-                          vd->init_expr->evaluated_type->name);
+                          typeName(vd->init_expr->evaluated_type));
                 }
             }
             return true;
@@ -557,10 +607,12 @@ bool Semantics::checkNode(ASTNode* node) {
                 rs->expr->evaluated_type = return_type;
             }
 
-            if (!isCompatibleType(return_type, rs->expr->evaluated_type)) {
+            if (!isCompatibleType(return_type, rs->expr->evaluated_type) ||
+                isBoolRefMisuse(return_type, rs->expr)) {
                 error(rs->loc,
                       "Return type '{}' does not match expression type '{}'",
-                      return_type->name, rs->expr->evaluated_type->name);
+                      typeName(return_type),
+                      typeName(rs->expr->evaluated_type));
             }
 
             rs->evaluated_type = return_type;
@@ -574,13 +626,26 @@ bool Semantics::checkNode(ASTNode* node) {
             node->evaluated_type = i8_t;
             return true;
         }
+        case ASTNode::NODE_BOOL_LITERAL: {
+            node->evaluated_type = bool_t;
+            return true;
+        }
         case ASTNode::NODE_UNARY_OP: {
             auto* uo = static_cast<UnaryOpNode*>(node);
             if (!checkNode(uo->value))
                 return false;
 
             if (uo->op.type == Token::NOT) {
-                uo->evaluated_type = i64_t;
+                if (!isBoolValue(uo->value)) {
+                    error(uo->loc,
+                          "Operand of '!' must be 'bool', but got '{}'",
+                          typeName(uo->value->evaluated_type));
+                }
+                uo->evaluated_type = bool_t;
+            } else if (uo->op.type != Token::AND &&
+                       isBoolValue(uo->value)) {
+                error(uo->loc, "Operator '{}' cannot be applied to 'bool'",
+                      uo->op.value);
             } else if(uo->op.type == Token::AND){
                 if(uo->value->kind != ASTNode::NODE_VARIABLE &&
                     uo->value->kind != ASTNode::NODE_MEMBER_ACCESS &&
@@ -602,9 +667,12 @@ bool Semantics::checkNode(ASTNode* node) {
             if (!checkNode(bo->right))
                 return false;
 
-            if (isAutoCastInteger(bo->right)) {
+            // Integer literals are never implicitly converted to bool; the
+            // operand type mismatch below reports the error.
+            if (isAutoCastInteger(bo->right) && !isBoolValue(bo->left)) {
                 bo->right->evaluated_type = bo->left->evaluated_type;
-            } else if (isAutoCastInteger(bo->left)) {
+            } else if (isAutoCastInteger(bo->left) &&
+                       !isBoolValue(bo->right)) {
                 bo->left->evaluated_type = bo->right->evaluated_type;
             }
 
@@ -613,8 +681,30 @@ bool Semantics::checkNode(ASTNode* node) {
                       "Types of left and right operands do not match. Left: "
                       "'{}', "
                       "Right: '{}'",
-                      bo->left->evaluated_type->name,
-                      bo->right->evaluated_type->name);
+                      typeName(bo->left->evaluated_type),
+                      typeName(bo->right->evaluated_type));
+            }
+
+            {
+                const bool is_logical = bo->op.type == Token::AND_AND ||
+                                        bo->op.type == Token::OR_OR;
+                const bool is_equality = bo->op.type == Token::EQUAL_EQUAL ||
+                                         bo->op.type == Token::NOT_EQUAL;
+                const bool l_bool = isBoolValue(bo->left);
+                const bool r_bool = isBoolValue(bo->right);
+                if (is_logical) {
+                    if (!l_bool || !r_bool) {
+                        const Type* bad = !l_bool ? bo->left->evaluated_type
+                                                  : bo->right->evaluated_type;
+                        error(bo->loc,
+                              "Operands of '{}' must be 'bool', but got '{}'",
+                              bo->op.value, typeName(bad));
+                    }
+                } else if (!is_equality && (l_bool || r_bool)) {
+                    error(bo->loc,
+                          "Operator '{}' cannot be applied to 'bool' operands",
+                          bo->op.value);
+                }
             }
 
             if (bo->op.type == Token::SLASH || bo->op.type == Token::MOD) {
@@ -631,7 +721,7 @@ bool Semantics::checkNode(ASTNode* node) {
                 bo->op.type == Token::NOT_EQUAL || bo->op.type == Token::LT ||
                 bo->op.type == Token::LE || bo->op.type == Token::GT ||
                 bo->op.type == Token::GE) {
-                node->evaluated_type = u8_t; // true/false
+                node->evaluated_type = bool_t; // true/false
             } else {
                 node->evaluated_type =
                     bo->left->evaluated_type; // arithmetic/bit operations
@@ -660,12 +750,17 @@ bool Semantics::checkNode(ASTNode* node) {
                 }
                 if (!checkNode(as->expr))
                     return false;
+                if (!as->expr->evaluated_type) {
+                    error(as->expr->loc, "Assigned expression has no value");
+                }
                 if (sym->type_info->name == "unknown") {
-                    if(as->expr->evaluated_type->isReference()){
+                    if(as->expr->evaluated_type && as->expr->evaluated_type->isReference()){
                         error(var_node->loc, "Cannot infer reference type for variable '{}' via assignment. Use initialization 'let {} = ...;' instead.", var_node->name, var_node->name);
                         return false;
                     }
                     sym->type_info = as->expr->evaluated_type;
+                    if (sym->decl_node)
+                        sym->decl_node->evaluated_type = sym->type_info;
                 } else if (isAutoCastInteger(as->expr)) {
                     checkLiteralRange(as->expr, sym->type_info);
                     as->expr->evaluated_type = sym->type_info;
@@ -689,11 +784,12 @@ bool Semantics::checkNode(ASTNode* node) {
                     "Left value of assignment is not a variable.");
             }
 
-            if (!isCompatibleType(lvalue_type, as->expr->evaluated_type)) {
+            if (!isCompatibleType(lvalue_type, as->expr->evaluated_type) ||
+                isBoolRefMisuse(lvalue_type, as->expr)) {
                 error(as->loc,
                       "Type mismatch in assignment. Left: '{}', Right: '{}'",
-                      lvalue_type->name,
-                      as->expr->evaluated_type->name);
+                      typeName(lvalue_type),
+                      typeName(as->expr->evaluated_type));
             }
             as->evaluated_type = lvalue_type;
             return true;
@@ -702,19 +798,26 @@ bool Semantics::checkNode(ASTNode* node) {
             auto* if_node = static_cast<IfNode*>(node);
             if (!checkNode(if_node->condition))
                 return false;
+            if (!isBoolValue(if_node->condition)) {
+                error(if_node->condition->loc,
+                      "Condition of 'if' must be 'bool', but got '{}'",
+                      typeName(if_node->condition->evaluated_type));
+            }
             if (!checkNode(if_node->then_block))
                 return false;
             if (if_node->else_block) {
                 if (!checkNode(if_node->else_block))
                     return false;
 
-                if (isAutoCastInteger(if_node->then_block)) {
+                if (isAutoCastInteger(if_node->then_block) &&
+                    !isBoolType(if_node->else_block->evaluated_type)) {
                     if_node->then_block->evaluated_type =
                         if_node->else_block->evaluated_type;
                     checkLiteralRange(if_node->then_block,
                                       if_node->then_block->evaluated_type);
                 }
-                if (isAutoCastInteger(if_node->else_block)) {
+                if (isAutoCastInteger(if_node->else_block) &&
+                    !isBoolType(if_node->then_block->evaluated_type)) {
                     if_node->else_block->evaluated_type =
                         if_node->then_block->evaluated_type;
                     checkLiteralRange(if_node->else_block,
@@ -727,8 +830,8 @@ bool Semantics::checkNode(ASTNode* node) {
                           "Type mismatch between 'then' and 'else' branches. "
                           "Then: "
                           "'{}', Else: '{}'",
-                          if_node->then_block->evaluated_type->name,
-                          if_node->else_block->evaluated_type->name);
+                          typeName(if_node->then_block->evaluated_type),
+                          typeName(if_node->else_block->evaluated_type));
                 }
             }
             if_node->evaluated_type = if_node->then_block->evaluated_type;
@@ -738,6 +841,11 @@ bool Semantics::checkNode(ASTNode* node) {
             auto* while_node = static_cast<WhileNode*>(node);
             if (!checkNode(while_node->condition))
                 return false;
+            if (!isBoolValue(while_node->condition)) {
+                error(while_node->condition->loc,
+                      "Condition of 'while' must be 'bool', but got '{}'",
+                      typeName(while_node->condition->evaluated_type));
+            }
             if (!checkNode(while_node->body))
                 return false;
 
@@ -816,6 +924,7 @@ void Semantics::init_builtins() {
     u16_t = make_primitive("u16", 2, true);
     u32_t = make_primitive("u32", 4, true);
     u64_t = make_primitive("u64", 8, true);
+    bool_t = make_primitive("bool", 1, true);
     unknown = make_primitive("unknown", 8, false);
 
     declare_type("i8", i8_t);
@@ -826,6 +935,7 @@ void Semantics::init_builtins() {
     declare_type("u16", u16_t);
     declare_type("u32", u32_t);
     declare_type("u64", u64_t);
+    declare_type("bool", bool_t);
     declare_type("unknown", unknown);
 }
 

@@ -431,6 +431,13 @@ ASTNode* Parser::parsePrimary() {
             num->loc = token.loc;
             return num;
         }
+        case Token::TRUE:
+        case Token::FALSE: {
+            stream.next();
+            auto b = new BoolLiteralNode(token.type == Token::TRUE);
+            b->loc = token.loc;
+            return b;
+        }
         case Token::IF: {
             return parseIfExpression();
         }

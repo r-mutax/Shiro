@@ -85,4 +85,8 @@ assert_meta_section_contains "$NOPUB_SRC" "private" "^  x: i64;"
 assert_meta_section_contains "$NOPUB_SRC" "private" "^  y: i64;"
 assert_meta_section_contains "$NOPUB_SRC" "private" "^  fn getx(self: &Point) -> i64;"
 
+# 7. bool type names
+assert_meta_section_contains "struct F { b: bool }; fn is_ok(v: bool) -> bool { return v; } fn main() -> i8 { 0; }" "private" "fn is_ok(v: bool) -> bool;"
+assert_meta_section_contains "struct F { b: bool }; fn main() -> i8 { 0; }" "private" "b: bool;"
+
 echo -e "${GREEN}All meta-writer tests passed successfully!${RESET}"

@@ -63,6 +63,9 @@ struct Token {
         U16,         // u16
         U32,         // u32
         U64,         // u64
+        BOOL,        // bool
+        TRUE,        // true
+        FALSE,       // false
         IDENT,       // Identifier
         EOF_TOK,
     };
@@ -175,6 +178,12 @@ struct Token {
                 return "u32";
             case U64:
                 return "u64";
+            case BOOL:
+                return "bool";
+            case TRUE:
+                return "true";
+            case FALSE:
+                return "false";
             case UNKNOWN:
                 return "unknown";
             case IDENT:
@@ -188,7 +197,8 @@ struct Token {
     bool isTypeCandidate() {
         return type == Token::I8 || type == Token::I16 || type == Token::I32 ||
                type == Token::I64 || type == Token::U8 || type == Token::U16 ||
-               type == Token::U32 || type == Token::U64 || type == Token::IDENT;
+               type == Token::U32 || type == Token::U64 || type == Token::BOOL ||
+               type == Token::IDENT;
     }
 };
 
