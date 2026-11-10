@@ -249,6 +249,9 @@ bool Semantics::checkNode(ASTNode* node) {
                           fd->fn_name);
                 }
             }
+            if (func_sym != nullptr)
+                func_sym->pub = fd->is_pub;
+
             fd->evaluated_type = ret_type;
             current_func_return_types.push_back(ret_type);
 
@@ -324,6 +327,7 @@ bool Semantics::checkNode(ASTNode* node) {
 
                     offset = (offset + align - 1) & ~(align - 1);
 
+                    mutable_sym->pub = vd->is_pub;
                     mutable_sym->offset = offset;
                     offset += mutable_sym->type_info->size;
                 } else {
