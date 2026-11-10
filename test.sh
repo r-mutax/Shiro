@@ -142,13 +142,13 @@ assert "fn main() -> i8 {let x; x = 10; x;}" 10
 assert "fn main() -> i8 {let x; let y; x = 5; y = x + 2; y;}" 7
 assert "fn main() -> i8 {let x; let y; y = x = 10; x + y;}" 20
 assert "fn main() -> i8 {let x; (x = 5) + 5;}" 10
-assert "fn main() -> i8 {if(1) 10 else 20;}" 10
-assert "fn main() -> i8 {if(0) 10 else 20;}" 20
-assert "fn main() -> i8 {if(1) 10;}" 10
-assert "fn main() -> i8 {if(0) 10;}" 0
+assert "fn main() -> i8 {if(1 == 1) 10 else 20;}" 10
+assert "fn main() -> i8 {if(0 == 1) 10 else 20;}" 20
+assert "fn main() -> i8 {if(1 == 1) 10;}" 10
+assert "fn main() -> i8 {if(0 == 1) 10;}" 0
 assert "fn main() -> i8 { 10; 20; }" 20
 assert "fn main() -> i8 {let x; x = 5; { let y; y = 10; x + y; } }" 15
-assert "fn main() -> i8 {let x; x = 10; if(1) { let y; y = x * 2; y + 5; } else { 0; } }" 25
+assert "fn main() -> i8 {let x; x = 10; if(1 == 1) { let y; y = x * 2; y + 5; } else { 0; } }" 25
 assert "fn main() -> i8 {let x; x = 5; while(x != 0) { x = x - 1; } x;}" 0
 assert "fn main() -> i8 {let x; let sum; x = 5; sum = 0; while(x != 0) { sum = sum + x; x = x - 1; let y; y = 99; } sum;}" 15
 assert "fn main() -> i8 {let x; x = 0; while(x != 0) { x = 99; } x;}" 0
@@ -192,22 +192,22 @@ assert "fn main() -> i8 {10 ^ 7;}" 13
 assert "fn main() -> i8 {5 | 3 & 2;}" 7
 assert "fn main() -> i8 {5 ^ 3 & 2;}" 7
 assert "fn main() -> i8 {6 | 4 ^ 3;}" 7
-assert "fn main() -> i8 {1 && 0;}" 0
-assert "fn main() -> i8 {0 && 1;}" 0
-assert "fn main() -> i8 {0 && 0;}" 0
-assert "fn main() -> i8 {1 && 1;}" 1
-assert "fn main() -> i8 {1 || 0;}" 1
-assert "fn main() -> i8 {0 || 1;}" 1
-assert "fn main() -> i8 {0 || 0;}" 0
-assert "fn main() -> i8 {1 || 1;}" 1
-assert "fn main() -> i8 {let x; x = 0; 0 && (x = 5); x;}" 0
-assert "fn main() -> i8 {let x; x = 0; 1 || (x = 5); x;}" 0
+assert "fn main() -> i8 {true && false;}" 0
+assert "fn main() -> i8 {false && true;}" 0
+assert "fn main() -> i8 {false && false;}" 0
+assert "fn main() -> i8 {true && true;}" 1
+assert "fn main() -> i8 {true || false;}" 1
+assert "fn main() -> i8 {false || true;}" 1
+assert "fn main() -> i8 {false || false;}" 0
+assert "fn main() -> i8 {true || true;}" 1
+assert "fn main() -> i8 {let x; x = 0; false && ((x = 5) == 5); x;}" 0
+assert "fn main() -> i8 {let x; x = 0; true || ((x = 5) == 5); x;}" 0
 assert "fn main() -> i8 {-5;}" -5
-assert "fn main() -> i8 {!0;}" 1
-assert "fn main() -> i8 {!5;}" 0
+assert "fn main() -> i8 {!false;}" 1
+assert "fn main() -> i8 {!true;}" 0
 assert "fn main() -> i8 {~1;}" -2
 assert "fn main() -> i8 {let x; x = 5; -x;}" -5
-assert "fn main() -> i8 {let x; x = 0; !x;}" 1
+assert "fn main() -> i8 {let x; x = false; !x;}" 1
 assert "fn main() -> i8 {let x: i32; x = 42; x;}" 42
 assert "fn main() -> i8 {let x: i8; x = 10; x;}" 10
 assert "fn main() -> i8 {let x: u8; x = 20; x;}" 20
@@ -227,7 +227,7 @@ assert "fn add(x: i8, y: i8) -> i8 { x + y; } fn main() -> i8 { add(10, 32); }" 
 assert "fn square(x: i32) -> i32 { x * x; } fn main() -> i8 { square(5); }" 25
 assert "fn sum6(a: i8, b: i8, c: i8, d: i8, e: i8, f: i8) -> i8 { a + b + c + d + e + f; } fn main() -> i8 { sum6(1, 2, 3, 4, 5, 6); }" 21
 assert "fn fact(n: i64) -> i64 { if (n <= 1) 1 else n * fact(n - 1); } fn main() -> i8 { fact(5); }" 120
-assert "fn test() -> i8 {10;} fn main() -> i8 { if(1){ return 10; } else { return test(); } 1; }" 10
+assert "fn test() -> i8 {10;} fn main() -> i8 { if(1 == 1){ return 10; } else { return test(); } 1; }" 10
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {42;}" 42
 assert "struct Point { x: i64, y:i64 }; fn main() -> i8 {let p : Point; p.x = 5; p.y = 10; p.x + p.y;}" 15
 
@@ -326,6 +326,64 @@ assert_checked_div on "fn main() -> i64 { $SPILLVARS return (a + b + c + d + e +
 assert_checked_div on "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 % (z + a - a)))))))))))); }" 1 "${MODMSG}1)"
 assert_checked_div on "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 / (a + b + c)))))))))))); }" 94
 assert_checked_div off "fn main() -> i64 { $SPILLVARS return a + (b + (c + (d + (e + (f + (g + (h + (i + (j + (k + (l + 100 / (a + b + c)))))))))))); }" 94
+# --- bool type ---
+assert "fn main() -> i8 { let b: bool = true; if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let b: bool = false; if (b) 1 else 0; }" 0
+assert "fn main() -> i8 { if (true) 7 else 9; }" 7
+assert "fn main() -> i8 { if (false) 7 else 9; }" 9
+assert "fn main() -> i8 { let b: bool; if (b) 1 else 2; }" 2
+assert "fn main() -> i8 { let b = true; if (b) 3 else 4; }" 3
+assert "fn main() -> i8 { let b: bool; b = true; if (b) 5 else 6; }" 5
+assert "fn main() -> i8 { let x: i64 = 3; let b: bool = x < 5; if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i64 = 3; let b: bool = x >= 5; if (b) 1 else 0; }" 0
+assert "fn main() -> i8 { let x: i64 = 3; let b: bool = x == 3; if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i64 = 3; let b: bool = x != 3; if (b) 1 else 0; }" 0
+assert "fn main() -> i8 { let x: u8 = 200; let b: bool = x > 100; if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i8 = -1; let b: bool = x < 0; if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; let b: bool = false; if (a && b) 1 else 0; }" 0
+assert "fn main() -> i8 { let a: bool = true; let b: bool = false; if (a || b) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; if (!a) 1 else 0; }" 0
+assert "fn main() -> i8 { let a: bool = false; if (!a) 1 else 0; }" 1
+assert "fn main() -> i8 { if (!!true) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i64 = 5; if (x > 1 && x < 10) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i64 = 50; if (x < 1 || x > 10) 1 else 0; }" 1
+assert "fn main() -> i8 { let x: i64 = 0; false && ((x = 1) == 1); if (x == 0) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; let b: bool = true; if (a == b) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; let b: bool = false; if (a != b) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; if (a == false) 1 else 0; }" 0
+assert "fn main() -> i8 { let a: bool = (1 < 2) == (3 < 4); if (a) 1 else 0; }" 1
+assert "fn pick(b: bool) -> i8 { if (b) 10 else 20; } fn main() -> i8 { pick(true) + pick(false); }" 30
+assert "fn pick(b: bool) -> i8 { if (b) 10 else 20; } fn main() -> i8 { let x: i64 = 1; pick(x > 0); }" 10
+assert "fn is_pos(n: i64) -> bool { return n > 0; } fn main() -> i8 { if (is_pos(5)) 1 else 0; }" 1
+assert "fn is_pos(n: i64) -> bool { return n > 0; } fn main() -> i8 { if (is_pos(0 - 5)) 1 else 0; }" 0
+assert "fn yes() -> bool { return true; } fn main() -> i8 { if (yes() && !yes()) 1 else 0; }" 0
+assert "fn is_even(n: i8) -> bool { if (n == 0) { return true; } return is_odd(n - 1); } fn is_odd(n: i8) -> bool { if (n == 0) { return false; } return is_even(n - 1); } fn main() -> i8 { if (is_even(10)) 42 else 0; }" 42
+assert "struct S { a: i64, f: bool, b: i64 }; fn main() -> i8 { let s: S; s.a = 1; s.f = true; s.b = 2; if (s.f) 1 else 0; }" 1
+assert "struct S { a: i64, f: bool, b: i64 }; fn main() -> i8 { let s: S; s.a = 1; s.f = true; s.b = 2; if (s.f && s.a == 1 && s.b == 2) 1 else 0; }" 1
+assert "struct S { f: bool }; fn main() -> i8 { let s: S; s.f = false; if (s.f) 1 else 0; }" 0
+assert "struct S { f: bool, g: bool }; fn main() -> i8 { let s: S; s.f = false; s.g = true; if (s.f) 1 else if (s.g) 2 else 3; }" 2
+assert "struct S { f: bool, fn flip() -> bool { return !self.f; } }; fn main() -> i8 { let s: S; s.f = false; if (s.flip()) 1 else 0; }" 1
+assert "struct S { f: bool, fn set(v: bool) -> bool { self.f = v; return self.f; } }; fn main() -> i8 { let s: S; if (s.set(true)) 1 else 0; }" 1
+assert "fn main() -> i8 { let arr: [3]bool; arr[0] = false; arr[1] = true; arr[2] = false; if (arr[1]) 1 else 0; }" 1
+assert "fn main() -> i8 { let arr: [3]bool; arr[0] = false; arr[1] = true; arr[2] = false; let i: i64 = 0; let n: i64 = 0; while (i < 3) { if (arr[i]) { n = n + 1; } i = i + 1; } n; }" 1
+assert "fn main() -> i8 { let arr: [4]bool; let i: i64 = 0; while (i < 4) { arr[i] = i < 2; i = i + 1; } let n: i64 = 0; i = 0; while (i < 4) { if (arr[i]) { n = n + 1; } i = i + 1; } n; }" 2
+assert "fn set(r: &bool) -> i8 { r = true; return 0; } fn main() -> i8 { let b: bool = false; set(&b); if (b) 1 else 0; }" 1
+assert "fn main() -> i8 { let i: i64 = 0; let run: bool = true; while (run) { i = i + 1; if (i == 5) { run = false; } } i; }" 5
+assert "fn main() -> i8 { let i: i64 = 0; while (i < 10 && i != 7) { i = i + 1; } i; }" 7
+assert "fn main() -> i8 { let i: i64 = 0; while (false) { i = 99; } i; }" 0
+assert "fn main() -> i8 { let b: bool = true; let c: bool = if (b) false else true; if (c) 1 else 0; }" 0
+assert "fn main() -> i64 { let b: bool = true; return if (b) 11 else 22; }" 11
+
+# reference-variable bool usage
+assert "fn main() -> i8 { let b: bool = true; let r = &b; if (r) 1 else 0; }" 1
+assert "fn main() -> i8 { let b: bool = false; let r = &b; if (!r) 1 else 0; }" 1
+assert "fn main() -> i8 { let b: bool = true; let r = &b; let c: bool = false; c = r; if (c) 1 else 0; }" 1
+assert "fn f() -> bool { let b: bool = true; let r = &b; return r; } fn main() -> i8 { if (f()) 1 else 0; }" 1
+assert "fn main() -> i8 { let a: bool = true; let b: bool = true; let ra = &a; let rb = &b; if (!ra || !rb) 0 else 1; }" 1
+assert "fn main() -> i8 { let b: bool = true; let r = &b; let i: i64 = 0; while (r) { i = i + 1; r = false; } i; }" 1
+assert "fn t(r: &bool) -> i8 { if (r) 1 else 0; } fn main() -> i8 { let b: bool = true; t(&b); }" 1
+assert "fn main() -> i8 { let b; b = false; if (b) 1 else 2; }" 2
+
 
 echo -e "\e[32mAll tests passed successfully!\e[0m"
 

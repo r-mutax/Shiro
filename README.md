@@ -31,9 +31,10 @@ With `--checked-div`, integer `/` and `%` check the divisor right before executi
 *   **Data Types**:
     *   Signed integers: `i8`, `i16`, `i32`, `i64`
     *   Unsigned integers: `u8`, `u16`, `u32`, `u64`
+    *   Boolean: `bool` (1 byte, values `true` / `false`). It is a regular scalar type usable for variables, parameters, return values, struct fields and array elements. There is no implicit conversion between `bool` and integers in either direction.
     *   Reference types: `&T` (e.g. `&i8`, `&Point`). References are created via initializers `let rx = &x;`, and multiple references `&rx` automatically flatten into a single reference `&T` to the underlying value.
     *   User-defined Structs: `struct StructName { member: Type, ... };` (Methods can be defined inside `struct` body)
-    *   Array types: `[N]T` (e.g. `[3]i64`) can be used in declarations, but element access (`a[i]`) is not implemented yet.
+    *   Array types: `[N]T` (e.g. `[3]i64`) can be used in declarations, and elements can be accessed and assigned with `a[i]`.
 *   **Type Inference**:
     *   Variables declared without an explicit type annotation or initialization (`let x;`) have an initially unresolved type (`unknown`). The type is automatically inferred and bound from the right-hand side of its first assignment (`x = expr`).
     *   However, reference binding is only permitted via initializers (`let rx = &x;`). Attempting to infer a reference type for an `unknown` variable via assignment is prohibited.
@@ -74,7 +75,7 @@ ExpressionStatement        ::= Expression ";"
 VariableDeclareStatement   ::= "let" Identifier [ ":" Type ] [ "=" Expression ] ";"
 
 Type                       ::= "&"* BasicType
-BasicType                  ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | Identifier
+BasicType                  ::= "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" | "bool" | Identifier
 
 Expression         ::= Assign
 Assign             ::= LogicalOr [ "=" Assign ]
@@ -94,6 +95,7 @@ MemberAccess       ::= Primary ( "." Identifier )*
 
 Primary            ::= Number 
                              | Character
+                             | "true" | "false"
                              | FunctionCall
                              | Identifier 
                              | "(" Expression ")" 
@@ -167,11 +169,12 @@ Precedence increases from top to bottom. The assignment operator (`=`) is **righ
 *   **Block Expression**: `{ stmt1; stmt2; ... }`
     *   A block grouping multiple statements acts as an expression, returning the value of the last evaluated statement. An empty block `{}` evaluates to `0`.
 *   **Conditionals (`if` expression)**: `if(condition) expr1 else expr2`
-    *   If the condition is non-zero (true), it evaluates to `expr1`. Otherwise (false), it evaluates to `expr2`. If `else` is omitted, a false condition evaluates to `0`.
+    *   The condition must be of type `bool`; using an integer as a condition is a compile error (write e.g. `x != 0`). If the condition is `true`, it evaluates to `expr1`. Otherwise (`false`), it evaluates to `expr2`. If `else` is omitted, a false condition evaluates to `0`.
 *   **Loops (`while` expression)**: `while(condition) expr`
-    *   Repeatedly executes `expr` as long as `condition` evaluates to non-zero (true). The `while` expression evaluates to the value of the last loop body iteration (or `0` if the loop never ran).
+    *   Repeatedly executes `expr` as long as `condition` evaluates to `true`. The condition must be of type `bool` (an integer condition is a compile error). The `while` expression evaluates to the value of the last loop body iteration (or `0` if the loop never ran).
 *   **Short-circuit Evaluation (Logical Operations)**:
-    *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation.
+    *   `&&` (Logical AND) and `||` (Logical OR) perform short-circuit evaluation. Their operands must be `bool`, and the result is `bool`; likewise `!` takes and returns `bool`.
+    *   Comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) yield `bool`. `==` / `!=` are also allowed between two `bool` values. Arithmetic, bitwise and shift operators (and unary `-`, `~`) on `bool` operands, ordering comparisons on `bool`, and mixing `bool` with integers in operators, assignments, arguments or returns are compile errors.
 *   **Character Literals**: `'<character>'`
     *   Single characters wrapped in single quotes are parsed as unsigned 8-bit integers (`u8`). Supports escape sequences like `\n` (newline), `\t` (tab), `\r` (carriage return), `\0` (null byte), `\\` (backslash), and `\'` (single quote).
 *   **Single-line Comments**: `// comment`
